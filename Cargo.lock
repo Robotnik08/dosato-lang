@@ -3,5 +3,51 @@
 version = 4
 
 [[package]]
-name = "dosato-lang"
+name = "dosato"
+version = "0.1.0"
+dependencies = [
+ "dosato-core",
+]
+
+[[package]]
+name = "dosato-ast"
+version = "0.1.0"
+
+[[package]]
+name = "dosato-cli"
+version = "0.1.0"
+dependencies = [
+ "dosato-core",
+]
+
+[[package]]
+name = "dosato-compiler"
+version = "0.1.0"
+
+[[package]]
+name = "dosato-core"
+version = "0.1.0"
+dependencies = [
+ "dosato-ast",
+ "dosato-compiler",
+ "dosato-lexer",
+ "dosato-parser",
+ "dosato-runtime",
+ "dosato-vm",
+]
+
+[[package]]
+name = "dosato-lexer"
+version = "0.1.0"
+
+[[package]]
+name = "dosato-parser"
+version = "0.1.0"
+
+[[package]]
+name = "dosato-runtime"
+version = "0.1.0"
+
+[[package]]
+name = "dosato-vm"
 version = "0.1.0"

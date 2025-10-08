@@ -1,0 +1,12 @@
+[package]
+name = "dosato-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dosato-lexer = { path = "../lexer" }
+dosato-parser = { path = "../parser" }
+dosato-ast = { path = "../ast" }
+dosato-compiler = { path = "../compiler" }
+dosato-vm = { path = "../vm" }
+dosato-runtime = { path = "../runtime" }

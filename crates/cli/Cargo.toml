@@ -1,0 +1,7 @@
+[package]
+name = "dosato-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dosato-core = { path = "../core" }
