@@ -1,6 +1,25 @@
 [package]
-name = "dosato-lang"
+name = "dosato"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = [
+    "crates/lexer",
+    "crates/parser",
+    "crates/ast",
+    "crates/compiler",
+    "crates/vm",
+    "crates/runtime",
+
+    "crates/core",
+    "crates/cli"
+]
+resolver = "2"
+
+[[bin]]
+name = "dosato"
+path = "crates/cli/src/lib.rs"
+
 [dependencies]
+dosato-core = { path = "crates/core" }
