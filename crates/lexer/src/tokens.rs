@@ -12,16 +12,14 @@ pub enum TokenKind {
 
     Operator(Operator),
 
-    // MasterKeyWord(MasterKeyword),
-    // ExtensionKeyWord(ExtensionKeyWord),
-    // ReservedKeyWord(ReservedKeyword),
+    KeyWord(KeyWord),
 
     Identifier(String),
 
     BracketOpen(BracketType),
     BracketClose(BracketType),
 
-    // TypeKeyword(TypeKeyword),
+    TypeKeyword(Types),
 
     TemplateStart,
     TemplateEnd,
@@ -89,8 +87,6 @@ pub enum Operator {
     StrictEquals,
     TripleNotEquals,
     PipeAssign,
-    FalseyCoalesce,
-    FalseyCoalesceAssign,
     Spaceship,
     ArrayUnwrap,
     AndAndAssign,
@@ -116,7 +112,7 @@ impl Operator {
             Xor => 9,
             Or => 10,
             AndAnd | XorXor => 11,
-            OrOr | NullCoalesce | FalseyCoalesce | Pipe => 12,
+            OrOr | NullCoalesce | Pipe => 12,
             Question | Colon | Semicolon | RangeUp | RangeDown | RangeUpInclusive | RangeDownInclusive => 13,
             Comma | FatArrow => 15,
 
@@ -142,22 +138,150 @@ impl Operator {
             | Operator::MaxAssign
             | Operator::MinAssign
             | Operator::NullCoalesceAssign
-            | Operator::FalseyCoalesceAssign
             | Operator::RootAssign
             | Operator::PipeAssign
+            | Operator::AndAndAssign
+            | Operator::OrOrAssign
+            | Operator::XorXorAssign
+            | Operator::ArrayUnwrap
         )
     }
 
     /// Is this a unary operator?
     pub fn is_unary(&self) -> bool {
         matches!(self,
-            Operator::Not | Operator::Increment | Operator::Decrement | Operator::Subtract | Operator::BitNot
+            Operator::Not 
+            | Operator::Increment 
+            | Operator::Decrement 
+            | Operator::Subtract 
+            | Operator::BitNot
         )
     }
 }
 
 pub enum BracketType {
-    Parenthesis,
-    Brace,
-    Bracket,
+    // (u16) is depth of nested brackets, so they can be paired correctly
+    Parenthesis(u16),
+    Brace(u16),
+    Bracket(u16),
+}
+
+pub enum Types {
+    Any,
+
+    Float,
+    Int,
+    Number, // Is same as Float, just different name
+    
+    Bool,
+    
+    String,
+    Char,
+    
+    Array, // List of values
+    Object, // Dictionary, Class instance
+    Function, // Function pointer / lambda
+    Class, // Class definition
+
+    Void
+}
+
+pub enum KeyWord {
+    Do,
+    Then,
+
+    If,
+    IfNot,
+    Else,
+    When,
+    Unless,
+
+    Make,
+    Const,
+    Set,
+    Define,
+    
+    Include,
+    Import,
+    
+    Return,
+
+    For,
+    With,
+    While,
+    During,
+    Until,
+    Til,
+
+    Loop,
+    Break,
+    Continue,
+    
+    Switch,
+    Match,
+
+    Class,
+    Implement,
+    Inherit,
+    Enum,
+
+    Other,
+    In
+}
+
+// Maps for matching strings to keywords and types
+pub const KEYWORD_MAP: &[(&str, KeyWord)] = &[
+    ("do", KeyWord::Do),
+    ("then", KeyWord::Then),
+
+    ("if", KeyWord::If),
+    ("ifnot", KeyWord::IfNot),
+    ("else", KeyWord::Else),
+    ("when", KeyWord::When),
+    ("unless", KeyWord::Unless),
+
+    ("make", KeyWord::Make),
+    ("const", KeyWord::Const),
+    ("set", KeyWord::Set),
+    ("define", KeyWord::Define),
+
+    ("include", KeyWord::Include),
+    ("import", KeyWord::Import),
+
+    ("return", KeyWord::Return),
+
+    ("for", KeyWord::For),
+    ("with", KeyWord::With),
+    ("while", KeyWord::While),
+    ("during", KeyWord::During),
+    ("until", KeyWord::Until),
+    ("til", KeyWord::Til),
+
+    ("loop", KeyWord::Loop),
+    ("break", KeyWord::Break),
+    ("continue", KeyWord::Continue),
+
+    ("switch", KeyWord::Switch),
+    ("match", KeyWord::Match),
+
+    ("class", KeyWord::Class),
+    ("implement", KeyWord::Implement),
+    ("inherit", KeyWord::Inherit),
+    ("enum", KeyWord::Enum),
+
+    ("other", KeyWord::Other),
+    ("in", KeyWord::In),
+];
+
+pub struct Token {
+    pub kind: TokenKind,
+    pub span: (usize, usize), // (start, end) in the source code
+    pub line: usize,
+    pub column: usize,
+}
+
+impl Token {
+    pub fn new(kind: TokenKind, span: (usize, usize), line: usize, column: usize) -> Self {
+        Self { kind, span, line, column }
+    }
 }
