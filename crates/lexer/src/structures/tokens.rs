@@ -1,6 +1,5 @@
 use crate::structures::keywords::KeyWord;
 use crate::structures::operators::Operator;
-use crate::structures::types::Types;
 
 pub enum TokenKind {
     Comment(String),
@@ -22,8 +21,6 @@ pub enum TokenKind {
 
     BracketOpen(BracketType),
     BracketClose(BracketType),
-
-    TypeKeyword(Types),
 
     TemplateStart,
     TemplateEnd,

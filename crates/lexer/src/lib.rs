@@ -4,7 +4,6 @@ mod structures {
     pub mod tokens;
     pub mod keywords;
     pub mod operators;
-    pub mod types;
 }
 
 pub fn tokenise(source: &str) -> Vec<tokens::Token> {

@@ -42,7 +42,25 @@ pub enum KeyWord {
     Enum,
 
     Other,
-    In
+    In,
+
+    // Types
+    Any,
+
+    Float,
+    Int,
+    Number,
+
+    Bool,
+    
+    String,
+    Char,
+    
+    Array,
+    Object,
+    Function,
+
+    Void
 }
 
 // Maps for matching strings to keywords and types
@@ -89,6 +107,23 @@ pub static KEYWORD_MAP: phf::Map<&'static str, KeyWord> = phf_map! {
 
     "other" => KeyWord::Other,
     "in" => KeyWord::In,
+
+    "any" => KeyWord::Any,
+
+    "float" => KeyWord::Float,
+    "int" => KeyWord::Int,
+    "number" => KeyWord::Number,
+
+    "bool" => KeyWord::Bool,
+
+    "string" => KeyWord::String,
+    "char" => KeyWord::Char,
+
+    "array" => KeyWord::Array,
+    "object" => KeyWord::Object,
+    "function" => KeyWord::Function,
+
+    "void" => KeyWord::Void,
 };
 
 impl Copy for KeyWord {}
@@ -137,6 +172,22 @@ impl KeyWord {
             | KeyWord::With
             | KeyWord::During
             | KeyWord::Til
+        )
+    }
+
+    pub fn is_type_keyword(&self) -> bool {
+        matches!(self,
+            KeyWord::Any
+            | KeyWord::Float
+            | KeyWord::Int
+            | KeyWord::Number
+            | KeyWord::Bool
+            | KeyWord::String
+            | KeyWord::Char
+            | KeyWord::Array
+            | KeyWord::Object
+            | KeyWord::Function
+            | KeyWord::Void
         )
     }
 
