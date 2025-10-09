@@ -29,13 +29,13 @@ pub enum TokenKind {
 
 pub enum Operator {
     Add,
-    Sub,
-    Mul,
-    Div,
-    Mod,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
     Assign,
-    Greater,
-    Less,
+    GreaterThen,
+    LessThen,
     Not,
     And,
     Xor,
@@ -47,20 +47,21 @@ pub enum Operator {
     Comma,
     Hash,
     AddAssign,
-    SubAssign,
-    MulAssign,
-    DivAssign,
-    ModAssign,
-    Inc,
-    Dec,
-    Eq,
-    Neq,
-    Gte,
-    Lte,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+    ModuloAssign,
+    Increment,
+    Decrement,
+    Equals,
+    NotEquals,
+    GreaterThanEqual,
+    LessThanEqual,
     AndAnd,
     OrOr,
-    Shl,
-    Shr,
+    XorXor,
+    ShiftLeft,
+    ShiftRight,
     AndAssign,
     OrAssign,
     XorAssign,
@@ -70,8 +71,8 @@ pub enum Operator {
     Min,
     Absolute,
     FatArrow,
-    ShrAssign,
-    ShlAssign,
+    ShiftRightAssign,
+    ShiftLeftAssign,
     PowerAssign,
     MaxAssign,
     MinAssign,
@@ -85,14 +86,13 @@ pub enum Operator {
     NullCoalesceAccess,
     RootAssign,
     Pipe,
-    TripleEq,
-    TripleNotEq,
+    StrictEquals,
+    TripleNotEquals,
     PipeAssign,
     FalseyCoalesce,
     FalseyCoalesceAssign,
     Spaceship,
     ArrayUnwrap,
-    XorXor,
     AndAndAssign,
     OrOrAssign,
     XorXorAssign,
@@ -105,13 +105,13 @@ impl Operator {
         use Operator::*;
         match self {
             Arrow | Hash | NullCoalesceAccess => 0,
-            Not | BitNot | Inc | Dec | Absolute => 1,
+            Not | BitNot | Increment | Decrement | Absolute => 1,
             Power | Root | Min | Max => 2,
-            Mul | Div | Mod => 3,
-            Add | Sub => 4,
-            Shl | Shr => 5,
-            Greater | Less | Gte | Lte | Spaceship => 6,
-            Eq | Neq | TripleEq | TripleNotEq => 7,
+            Multiply | Divide | Modulo => 3,
+            Add | Subtract => 4,
+            ShiftLeft | ShiftRight => 5,
+            GreaterThen | LessThen | GreaterThanEqual | LessThanEqual | Spaceship => 6,
+            Equals | NotEquals | StrictEquals | TripleNotEquals => 7,
             And => 8,
             Xor => 9,
             Or => 10,
@@ -129,16 +129,16 @@ impl Operator {
         matches!(self,
             Operator::Assign
             | Operator::AddAssign
-            | Operator::SubAssign
-            | Operator::MulAssign
-            | Operator::DivAssign
-            | Operator::ModAssign
+            | Operator::SubtractAssign
+            | Operator::MultiplyAssign
+            | Operator::DivideAssign
+            | Operator::ModuloAssign
             | Operator::AndAssign
             | Operator::OrAssign
             | Operator::XorAssign
             | Operator::PowerAssign
-            | Operator::ShrAssign
-            | Operator::ShlAssign
+            | Operator::ShiftRightAssign
+            | Operator::ShiftLeftAssign
             | Operator::MaxAssign
             | Operator::MinAssign
             | Operator::NullCoalesceAssign
@@ -151,7 +151,7 @@ impl Operator {
     /// Is this a unary operator?
     pub fn is_unary(&self) -> bool {
         matches!(self,
-            Operator::Not | Operator::Inc | Operator::Dec | Operator::Sub | Operator::BitNot
+            Operator::Not | Operator::Increment | Operator::Decrement | Operator::Subtract | Operator::BitNot
         )
     }
 }
