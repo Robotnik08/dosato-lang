@@ -70,6 +70,8 @@ pub enum Operator {
     XorXorAssign,
 }
 
+pub static OPERATOR_CHARS: &str = "+-*/%=><!&^|~?:.,;#";
+
 pub static OPERATOR_MAP: phf::Map<&'static str, Operator> = phf_map! {
     "+" => Operator::Add,
     "-" => Operator::Subtract,
@@ -136,6 +138,7 @@ pub static OPERATOR_MAP: phf::Map<&'static str, Operator> = phf_map! {
     "&&=" => Operator::AndAndAssign,
     "||=" => Operator::OrOrAssign,
     "^^=" => Operator::XorXorAssign,
+    "|>=" => Operator::PipeAssign,
     "#" => Operator::Hash,
 };
 
@@ -143,6 +146,80 @@ impl Copy for Operator {}
 impl Clone for Operator {
     fn clone(&self) -> Self {
         *self
+    }
+}
+
+impl std::fmt::Debug for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Operator::Add => write!(f, "Add(+)"),
+            Operator::Subtract => write!(f, "Subtract(-)"),
+            Operator::Multiply => write!(f, "Multiply(*)"),
+            Operator::Divide => write!(f, "Divide(/)"),
+            Operator::Modulo => write!(f, "Modulo(%)"),
+            Operator::Assign => write!(f, "Assign(=)"),
+            Operator::GreaterThen => write!(f, "GreaterThen(>)"),
+            Operator::LessThen => write!(f, "LessThen(<)"),
+            Operator::Not => write!(f, "Not(!)"),
+            Operator::And => write!(f, "And(&)"),
+            Operator::Xor => write!(f, "Xor(^)"),
+            Operator::Or => write!(f, "Or(|)"),
+            Operator::BitNot => write!(f, "BitNot(~)"),
+            Operator::Question => write!(f, "Question(?)"),
+            Operator::Colon => write!(f, "Colon(:)"),
+            Operator::Arrow => write!(f, "Arrow(->)"),
+            Operator::Dot => write!(f, "Dot(.)"),
+            Operator::Comma => write!(f, "Comma(,)"),
+            Operator::AddAssign => write!(f, "AddAssign(+=)"),
+            Operator::SubtractAssign => write!(f, "SubtractAssign(-=)"),
+            Operator::MultiplyAssign => write!(f, "MultiplyAssign(*=)"),
+            Operator::DivideAssign => write!(f, "DivideAssign(/=)"),
+            Operator::ModuloAssign => write!(f, "ModuloAssign(%)"),
+            Operator::Increment => write!(f, "Increment(++)"),
+            Operator::Decrement => write!(f, "Decrement(--)"),
+            Operator::Equals => write!(f, "Equals(==)"),
+            Operator::NotEquals => write!(f, "NotEquals(!=)"),
+            Operator::GreaterThanEqual => write!(f, "GreaterThanEqual(>=)"),
+            Operator::LessThanEqual => write!(f, "LessThanEqual(<=)"),
+            Operator::AndAnd => write!(f, "AndAnd(&&)"),
+            Operator::OrOr => write!(f, "OrOr(||)"),
+            Operator::XorXor => write!(f, "XorXor(^^)"),
+            Operator::ShiftLeft => write!(f, "ShiftLeft(<<)"),
+            Operator::ShiftRight => write!(f, "ShiftRight(>>)"),
+            Operator::AndAssign => write!(f, "AndAssign(&=)"),
+            Operator::OrAssign => write!(f, "OrAssign(||=)"),
+            Operator::XorAssign => write!(f, "XorAssign(^=)"),
+            Operator::Power => write!(f, "Power(**)"),
+            Operator::Root => write!(f, "Root(^/)"),
+            Operator::Max => write!(f, "Max(>|)"),
+            Operator::Min => write!(f, "Min(<|)"),
+            Operator::Absolute => write!(f, "Absolute(!-)"),
+            Operator::FatArrow => write!(f, "FatArrow(=>)"),
+            Operator::ShiftRightAssign => write!(f, "ShiftRightAssign(>>=)"),
+            Operator::ShiftLeftAssign => write!(f, "ShiftLeftAssign(<<=)"),
+            Operator::PowerAssign => write!(f, "PowerAssign(**=)"),
+            Operator::MaxAssign => write!(f, "MaxAssign(>|=)"),
+            Operator::MinAssign => write!(f, "MinAssign(<|=)"),
+            Operator::Semicolon => write!(f, "Semicolon(;)"),
+            Operator::RangeUp => write!(f, "RangeUp(>)"),
+            Operator::RangeDown => write!(f, "RangeDown(<)"),
+            Operator::RangeUpInclusive => write!(f, "RangeUpInclusive(>=)"),
+            Operator::RangeDownInclusive => write!(f, "RangeDownInclusive(<=)"),
+            Operator::NullCoalesce => write!(f, "NullCoalesce(??)"),
+            Operator::NullCoalesceAssign => write!(f, "NullCoalesceAssign(??=)"),
+            Operator::NullCoalesceAccess => write!(f, "NullCoalesceAccess(?.)"),
+            Operator::RootAssign => write!(f, "RootAssign(^/=)"),
+            Operator::Pipe => write!(f, "Pipe(|>)"),
+            Operator::StrictEquals => write!(f, "StrictEquals(===)"),
+            Operator::TripleNotEquals => write!(f, "TripleNotEquals(!==)"),
+            Operator::PipeAssign => write!(f, "PipeAssign(|>=)"),
+            Operator::Spaceship => write!(f, "Spaceship(<=>)"),
+            Operator::ArrayUnwrapAssign => write!(f, "ArrayUnwrapAssign(#=)"),
+            Operator::AndAndAssign => write!(f, "AndAndAssign(&&=)"),
+            Operator::OrOrAssign => write!(f, "OrOrAssign(||=)"),
+            Operator::XorXorAssign => write!(f, "XorXorAssign(^^=)"),
+            Operator::Hash => write!(f, "Hash(#)"),
+        }
     }
 }
 

@@ -11,5 +11,12 @@ fn main() {
     let filename = &args[1];
     let source = fs::read_to_string(filename).expect("Failed to read file");
 
-    println!("Source Code:\n{}", source);
+    let mut lexer = dosato_core::Lexer::new(&source);
+    let tokens = lexer.tokenise();
+
+    println!("Token amount: {}", tokens.len());
+
+    for token in tokens {
+        println!("{:?}", token);
+    }
 }

@@ -133,6 +133,57 @@ impl Clone for KeyWord {
     }
 }
 
+impl std::fmt::Debug for KeyWord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeyWord::Do => write!(f, "Do"),
+            KeyWord::Then => write!(f, "Then"),
+            KeyWord::If => write!(f, "If"),
+            KeyWord::IfNot => write!(f, "IfNot"),
+            KeyWord::Else => write!(f, "Else"),
+            KeyWord::ElseIf => write!(f, "ElseIf"),
+            KeyWord::ElseIfNot => write!(f, "ElseIfNot"),
+            KeyWord::When => write!(f, "When"),
+            KeyWord::Unless => write!(f, "Unless"),
+            KeyWord::Make => write!(f, "Make"),
+            KeyWord::Const => write!(f, "Const"),
+            KeyWord::Set => write!(f, "Set"),
+            KeyWord::Define => write!(f, "Define"),
+            KeyWord::Include => write!(f, "Include"),
+            KeyWord::Import => write!(f, "Import"),
+            KeyWord::Return => write!(f, "Return"),
+            KeyWord::For => write!(f, "For"),
+            KeyWord::With => write!(f, "With"),
+            KeyWord::While => write!(f, "While"),
+            KeyWord::During => write!(f, "During"),
+            KeyWord::Until => write!(f, "Until"),
+            KeyWord::Til => write!(f, "Til"),
+            KeyWord::Loop => write!(f, "Loop"),
+            KeyWord::Break => write!(f, "Break"),
+            KeyWord::Continue => write!(f, "Continue"),
+            KeyWord::Switch => write!(f, "Switch"),
+            KeyWord::Match => write!(f, "Match"),
+            KeyWord::Class => write!(f, "Class"),
+            KeyWord::Implement => write!(f, "Implement"),
+            KeyWord::Inherit => write!(f, "Inherit"),
+            KeyWord::Enum => write!(f, "Enum"),
+            KeyWord::Other => write!(f, "Other"),
+            KeyWord::In => write!(f, "In"),
+            KeyWord::Any => write!(f, "Any"),
+            KeyWord::Float => write!(f, "Float"),
+            KeyWord::Int => write!(f, "Int"),
+            KeyWord::Number => write!(f, "Number"),
+            KeyWord::Bool => write!(f, "Bool"),
+            KeyWord::String => write!(f, "String"),
+            KeyWord::Char => write!(f, "Char"),
+            KeyWord::Array => write!(f, "Array"),
+            KeyWord::Object => write!(f, "Object"),
+            KeyWord::Function => write!(f, "Function"),
+            KeyWord::Void => write!(f, "Void"),
+        }
+    }
+}
+
 impl KeyWord {
     pub fn is_master_keyword(&self) -> bool {
         matches!(self,
