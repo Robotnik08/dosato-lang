@@ -62,9 +62,9 @@ impl Token {
 impl std::fmt::Debug for TokenKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TokenKind::Comment(content) => write!(f, "Comment({})", content),
-            TokenKind::StringLiteral(content) => write!(f, "StringLiteral({})", content),
-            TokenKind::CharLiteral(content) => write!(f, "CharLiteral({})", content),
+            TokenKind::Comment(content) => write!(f, "Comment({})", content.escape_default()),
+            TokenKind::StringLiteral(content) => write!(f, "StringLiteral(\"{}\")", content.escape_default()),
+            TokenKind::CharLiteral(content) => write!(f, "CharLiteral('{}')", content.escape_default()),
             TokenKind::NumberLiteral(content) => write!(f, "NumberLiteral({})", content),
             TokenKind::IntegerLiteral(content) => write!(f, "IntegerLiteral({})", content),
             TokenKind::BooleanLiteral(content) => write!(f, "BooleanLiteral({})", content),

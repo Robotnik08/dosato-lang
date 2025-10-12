@@ -25,6 +25,7 @@ impl Lexer {
 
     pub fn tokenise(&mut self) -> Vec<tokens::Token> {
         let mut tokens = Vec::new();
+        self.remove_windows_carriage_returns(); // Normalize line endings
         let chars: Vec<char> = self.source.chars().collect();
         let length = chars.len();
 
@@ -148,7 +149,8 @@ impl Lexer {
                         self.advance();
                     }
 
-                    let string_content: String = chars[string_start..self.position].iter().collect();
+                    let string_content = unescape_string(chars[string_start..self.position].iter().collect::<String>().as_str());
+
 
                     if self.position < length && chars[self.position] == '"' {
                         self.advance(); // Skip closing quote
@@ -376,7 +378,7 @@ impl Lexer {
     }
 
     fn advance_to_end_of_line(&mut self, chars: &[char], length: usize) {
-        while self.position < length && chars[self.position] != '\n' && chars[self.position] != '\r' {
+        while self.position < length && chars[self.position] != '\n' {
             self.advance();
         }
     }
@@ -393,4 +395,37 @@ impl Lexer {
 
         chars[start_position..self.position].iter().collect()
     }
+
+    fn remove_windows_carriage_returns(&mut self) {
+        self.source = self.source.replace("\r\n", "\n");
+    }
+}
+
+fn unescape_string(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some('n') => result.push('\n'),
+                Some('r') => result.push('\r'),
+                Some('t') => result.push('\t'),
+                Some('"') => result.push('"'),
+                Some('\'') => result.push('\''),
+                Some('\\') => result.push('\\'),
+                Some('0') => result.push('\0'),
+                Some(other) => {
+                    // Unknown escape, keep both characters
+                    result.push('\\');
+                    result.push(other);
+                }
+                None => result.push('\\'),
+            }
+        } else {
+            result.push(c);
+        }
+    }
+
+    result
 }
