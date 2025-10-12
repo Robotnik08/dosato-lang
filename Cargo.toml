@@ -19,7 +19,7 @@ resolver = "2"
 
 [[bin]]
 name = "dosato"
-path = "crates/cli/src/lib.rs"
+path = "crates/cli/src/main.rs"
 
 [dependencies]
 dosato-core = { path = "crates/core" }
