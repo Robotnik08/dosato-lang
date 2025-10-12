@@ -29,6 +29,8 @@ impl Lexer {
         let chars: Vec<char> = self.source.chars().collect();
         let length = chars.len();
 
+        let mut template_nesting = 0; // 0 means not in template, 1 means in template, etc.
+
         let mut bracket_depth = 0;
 
         while self.position < length {
@@ -218,6 +220,45 @@ impl Lexer {
                     } else {
                         // ERR Unterminated char literal
                     }
+                }
+
+                // template strings
+                '`' => {
+                    // when encountering { inside a template string, increase template_nesting and continue the lexing as normal
+                    let start_char_position = self.position;
+                    let start_position = tokens::TokenPosition {
+                        line: self.line,
+                        column: self.column,
+                    };
+                    self.advance(); // skip opening `
+
+                    while let Some(&c) = chars.get(self.position) {
+                        if c == '`' {
+                            // end of template
+                            self.advance(); // skip closing `
+                            tokens.push(tokens::Token::new(
+                                tokens::TokenKind::StringTemplateEnd,
+                                (start_char_position, self.position),
+                                start_position,
+                            ));
+                            break;
+                        } else if c == '{' {
+                            // start of embedded expression
+                            template_nesting += 1;
+                            tokens.push(tokens::Token::new(
+                                tokens::TokenKind::StringTemplate,
+                                (start_char_position, self.position - 1),
+                                start_position,
+                            ));
+                            break;
+                        } else if c == '\\' && self.position + 1 < length {
+                            self.advance_by(2); // Skip escape character and next char
+                        } else {
+                            self.advance();
+                        }
+                    }
+
+
                 }
 
                 // operators

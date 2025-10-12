@@ -22,8 +22,8 @@ pub enum TokenKind {
     BracketOpen(BracketType),
     BracketClose(BracketType),
 
-    TemplateStart,
-    TemplateEnd,
+    StringTemplate,
+    StringTemplateEnd,
 }
 
 pub enum BracketType {
@@ -84,8 +84,8 @@ impl std::fmt::Debug for TokenKind {
                 BracketType::Brace(depth) => write!(f, "BracketClose(Brace, depth={})", depth),
                 BracketType::Bracket(depth) => write!(f, "BracketClose(Bracket, depth={})", depth),
             },
-            TokenKind::TemplateStart => write!(f, "TemplateStart"),
-            TokenKind::TemplateEnd => write!(f, "TemplateEnd"),
+            TokenKind::StringTemplate => write!(f, "StringTemplate"),
+            TokenKind::StringTemplateEnd => write!(f, "StringTemplateEnd"),
         }
     }
 }
