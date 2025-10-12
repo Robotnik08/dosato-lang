@@ -19,10 +19,10 @@ Rust, with its strong type system and memory safety guarantees, seemed like a be
 ## Progress
 
 ### cDosato recreation progress:
-![](https://geps.dev/progress/0)
+![](https://geps.dev/progress/5)
 
 ### Lexer progress:
-![](https://geps.dev/progress/0)
+![](https://geps.dev/progress/80)
 
 ### Parser progress:
 ![](https://geps.dev/progress/0)
