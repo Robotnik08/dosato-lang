@@ -53,6 +53,65 @@ impl Lexer {
                         column: self.column,
                     };
 
+                    if chars[self.position] == '0' {
+                        if self.position + 1 < length {
+                            match chars[self.position + 1] {
+                                'x' | 'X' => {
+                                    // Hexadecimal
+                                    self.advance_by(2); // Skip '0x'
+                                    let hex_start = self.position;
+                                    while self.position < length && chars[self.position].is_digit(16) {
+                                        self.advance();
+                                    }
+                                    let hex_str: String = chars[hex_start..self.position].iter().collect();
+                                    if let Ok(number) = i64::from_str_radix(&hex_str, 16) {
+                                        tokens.push(tokens::Token::new(
+                                            tokens::TokenKind::IntegerLiteral(number),
+                                            (start_char_position, self.position),
+                                            start_position,
+                                        ));
+                                    }
+                                    continue;
+                                }
+                                'o' | 'O' => {
+                                    // Octal
+                                    self.advance_by(2); // Skip '0o'
+                                    let oct_start = self.position;
+                                    while self.position < length && (chars[self.position] >= '0' && chars[self.position] <= '7') {
+                                        self.advance();
+                                    }
+                                    let oct_str: String = chars[oct_start..self.position].iter().collect();
+                                    if let Ok(number) = i64::from_str_radix(&oct_str, 8) {
+                                        tokens.push(tokens::Token::new(
+                                            tokens::TokenKind::IntegerLiteral(number),
+                                            (start_char_position, self.position),
+                                            start_position,
+                                        ));
+                                    }
+                                    continue;
+                                }
+                                'b' | 'B' => {
+                                    // Binary
+                                    self.advance_by(2); // Skip '0b'
+                                    let bin_start = self.position;
+                                    while self.position < length && (chars[self.position] == '0' || chars[self.position] == '1') {
+                                        self.advance();
+                                    }
+                                    let bin_str: String = chars[bin_start..self.position].iter().collect();
+                                    if let Ok(number) = i64::from_str_radix(&bin_str, 2) {
+                                        tokens.push(tokens::Token::new(
+                                            tokens::TokenKind::IntegerLiteral(number),
+                                            (start_char_position, self.position),
+                                            start_position,
+                                        ));
+                                    }
+                                    continue;
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+
                     let mut has_dot = false;
                     while self.position < length && (chars[self.position].is_digit(10) || chars[self.position] == '.') {
                         if chars[self.position] == '.' {
