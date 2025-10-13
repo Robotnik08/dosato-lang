@@ -22,8 +22,8 @@ pub enum TokenKind {
     BracketOpen(BracketType),
     BracketClose(BracketType),
 
-    StringTemplate,
-    StringTemplateEnd,
+    StringTemplate(StringTemplatePart),
+    StringTemplateEnd(StringTemplatePart),
 }
 
 pub enum BracketType {
@@ -31,6 +31,11 @@ pub enum BracketType {
     Parenthesis(u16),
     Brace(u16),
     Bracket(u16),
+}
+
+pub struct StringTemplatePart {
+    pub id: u16,            // id for identifying which template this part belongs to
+    pub value: String,      // The string content of the template part
 }
 
 pub struct TokenPosition {
@@ -84,8 +89,8 @@ impl std::fmt::Debug for TokenKind {
                 BracketType::Brace(depth) => write!(f, "BracketClose(Brace, depth={})", depth),
                 BracketType::Bracket(depth) => write!(f, "BracketClose(Bracket, depth={})", depth),
             },
-            TokenKind::StringTemplate => write!(f, "StringTemplate"),
-            TokenKind::StringTemplateEnd => write!(f, "StringTemplateEnd"),
+            TokenKind::StringTemplate(part) => write!(f, "StringTemplate(id={}, value=\"{}\")", part.id, part.value.escape_default()),
+            TokenKind::StringTemplateEnd(part) => write!(f, "StringTemplateEnd(id={}, value=\"{}\")", part.id, part.value.escape_default()),
         }
     }
 }

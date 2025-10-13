@@ -29,7 +29,10 @@ impl Lexer {
         let chars: Vec<char> = self.source.chars().collect();
         let length = chars.len();
 
-        let mut template_nesting = 0; // 0 means not in template, 1 means in template, etc.
+        let mut template_n = 0; // 0 means not in template, >0 means in template
+        let mut current_template_id: u16 = 0;
+        let mut template_bracket_depths: [u16; 256] = [0; 256];
+        let mut template_ids: [u16; 256] = [0; 256];
 
         let mut bracket_depth = 0;
 
@@ -133,6 +136,62 @@ impl Lexer {
                         start_position,
                     ));
                     self.advance();
+
+                    // If we are in a template, and the bracket is } and the bracket depth matches the template's starting depth - 1, continue the template
+                    if current_char == '}' && template_n > 0 && bracket_depth == template_bracket_depths[template_n - 1] {
+                        let start_char_position = self.position;
+                        let start_position = tokens::TokenPosition {
+                            line: self.line,
+                            column: self.column,
+                        };
+
+                        while self.position < length {
+                            let current_char = chars[self.position];
+                            if current_char == '{' {
+                                // put the template part token
+                                let part_content = chars[start_char_position..self.position].iter().collect::<String>();
+                                let part_content_unescaped = unescape_string(part_content.as_str());
+                                tokens.push(tokens::Token::new(
+                                    tokens::TokenKind::StringTemplate(tokens::StringTemplatePart {
+                                        id: template_ids[template_n - 1],
+                                        value: part_content_unescaped,
+                                    }),
+                                    (start_char_position, self.position),
+                                    start_position,
+                                ));
+                                break;
+                            }
+
+                            if current_char == '`' {
+                                // put the template end token
+                                let part_content = chars[start_char_position..self.position].iter().collect::<String>();
+                                let part_content_unescaped = unescape_string(part_content.as_str());
+                                tokens.push(tokens::Token::new(
+                                    tokens::TokenKind::StringTemplateEnd(tokens::StringTemplatePart {
+                                        id: template_ids[template_n - 1],
+                                        value: part_content_unescaped,
+                                    }),
+                                    (start_char_position, self.position + 1),
+                                    start_position,
+                                ));
+
+                                self.advance(); // Skip closing backtick
+
+                                template_n -= 1;
+                                break;
+                            }
+
+                            if current_char == '\\' && self.position + 1 < length && (chars[self.position + 1] == '`' || chars[self.position + 1] == '{' || chars[self.position + 1] == '\\') {
+                                self.advance(); // Skip escape character or escaped brace
+                            }
+
+                            if current_char == '\n' {
+                                self.advance_line();
+                            } else {
+                                self.advance();
+                            }
+                        }
+                    }
                 }
 
                 '"' => {
@@ -145,10 +204,15 @@ impl Lexer {
                     let string_start = self.position;
 
                     while self.position < length && chars[self.position] != '"' {
-                        if chars[self.position] == '\\' && self.position + 1 < length {
+                        if chars[self.position] == '\\' && self.position + 1 < length && (chars[self.position + 1] == '"' || chars[self.position + 1] == '\\') {
                             self.advance(); // Skip escape character
                         }
-                        self.advance();
+
+                        if chars[self.position] == '\n' {
+                            self.advance_line();
+                        } else {
+                            self.advance();
+                        }
                     }
 
                     let string_content = unescape_string(chars[string_start..self.position].iter().collect::<String>().as_str());
@@ -205,7 +269,7 @@ impl Lexer {
                             } else {
                                 // ERR Unterminated char literal
                             }
-                        } else if char_content == '\'' {
+                        } else if char_content == '\'' || char_content == '\n' || char_content == '\r' || char_content == '\t'{
                             // ERR Invalid char literal
                         } else if self.position < length && chars[self.position] == '\'' {
                             self.advance(); // Skip closing quote
@@ -222,43 +286,71 @@ impl Lexer {
                     }
                 }
 
-                // template strings
+                // start of template string
                 '`' => {
-                    // when encountering { inside a template string, increase template_nesting and continue the lexing as normal
                     let start_char_position = self.position;
                     let start_position = tokens::TokenPosition {
                         line: self.line,
                         column: self.column,
                     };
-                    self.advance(); // skip opening `
+                    self.advance(); // Skip opening backtick
 
-                    while let Some(&c) = chars.get(self.position) {
-                        if c == '`' {
-                            // end of template
-                            self.advance(); // skip closing `
+                    if template_n >= 256 {
+                        // ERR Too many nested templates
+                        continue;
+                    }
+                    
+                    template_bracket_depths[template_n] = bracket_depth;
+                    template_ids[template_n] = current_template_id;
+                    template_n += 1;
+                    current_template_id += 1;
+
+                    while self.position < length {
+                        let current_char = chars[self.position];
+                        if current_char == '{' {
+                            // put the template part token
+                            let part_content = chars[start_char_position + 1..self.position].iter().collect::<String>();
+                            let part_content_unescaped = unescape_string(part_content.as_str());
                             tokens.push(tokens::Token::new(
-                                tokens::TokenKind::StringTemplateEnd,
+                                tokens::TokenKind::StringTemplate(tokens::StringTemplatePart {
+                                    id: template_ids[template_n - 1],
+                                    value: part_content_unescaped,
+                                }),
                                 (start_char_position, self.position),
                                 start_position,
                             ));
                             break;
-                        } else if c == '{' {
-                            // start of embedded expression
-                            template_nesting += 1;
+                        }
+
+                        if current_char == '`' {
+                            // put the template end token
+                            let part_content = chars[start_char_position + 1..self.position].iter().collect::<String>();
+                            let part_content_unescaped = unescape_string(part_content.as_str());
                             tokens.push(tokens::Token::new(
-                                tokens::TokenKind::StringTemplate,
-                                (start_char_position, self.position - 1),
+                                tokens::TokenKind::StringTemplateEnd(tokens::StringTemplatePart {
+                                    id: template_ids[template_n - 1],
+                                    value: part_content_unescaped,
+                                }),
+                                (start_char_position, self.position + 1),
                                 start_position,
                             ));
+
+                            self.advance(); // Skip closing backtick
+
+                            template_n -= 1;
                             break;
-                        } else if c == '\\' && self.position + 1 < length {
-                            self.advance_by(2); // Skip escape character and next char
+                        }
+
+                        if current_char == '\\' && self.position + 1 < length && (chars[self.position + 1] == '`' || chars[self.position + 1] == '{' || chars[self.position + 1] == '\\') {
+                            self.advance(); // Skip escape character or escaped brace
+                        }
+
+                        if current_char == '\n' {
+                            self.advance_line();
                         } else {
                             self.advance();
                         }
                     }
-
-
                 }
 
                 // operators
@@ -455,6 +547,8 @@ fn unescape_string(input: &str) -> String {
                 Some('"') => result.push('"'),
                 Some('\'') => result.push('\''),
                 Some('\\') => result.push('\\'),
+                Some('`') => result.push('`'),
+                Some('{') => result.push('{'),
                 Some('0') => result.push('\0'),
                 Some(other) => {
                     // Unknown escape, keep both characters
