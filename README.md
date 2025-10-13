@@ -22,7 +22,7 @@ Rust, with its strong type system and memory safety guarantees, seemed like a be
 ![](https://geps.dev/progress/5)
 
 ### Lexer progress:
-![](https://geps.dev/progress/80)
+![](https://geps.dev/progress/90)
 
 ### Parser progress:
 ![](https://geps.dev/progress/0)
@@ -37,4 +37,7 @@ Rust, with its strong type system and memory safety guarantees, seemed like a be
 ![](https://geps.dev/progress/0)
 
 ### Standard Library progress:
+![](https://geps.dev/progress/0)
+
+### Error handling progress:
 ![](https://geps.dev/progress/0)
