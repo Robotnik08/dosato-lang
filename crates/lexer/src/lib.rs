@@ -124,9 +124,23 @@ impl Lexer {
                         self.advance();
                     }
 
+                    // Check for scientific notation (e/E)
+                    let mut has_exponent = false;
+                    if self.position < length && (chars[self.position] == 'e' || chars[self.position] == 'E') {
+                        has_exponent = true;
+                        self.advance(); // Skip 'e' or 'E'
+                        if self.position < length && (chars[self.position] == '+' || chars[self.position] == '-') {
+                            self.advance(); // Skip sign
+                        }
+                        // Exponent digits
+                        while self.position < length && chars[self.position].is_digit(10) {
+                            self.advance();
+                        }
+                    }
+
                     let number_str = chars[start_char_position..self.position].iter().collect::<String>();
 
-                    if has_dot {
+                    if has_dot || has_exponent {
                         if let Ok(number) = number_str.parse::<f64>() {
                             tokens.push(tokens::Token::new(
                                 tokens::TokenKind::NumberLiteral(number),
