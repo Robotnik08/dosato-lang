@@ -97,7 +97,7 @@ impl Error {
             let lines: Vec<&str> = source.lines().collect();
             if self.line > 0 && self.line <= lines.len() {
                 let error_line = lines[self.line - 1];
-                println!("\t{}", error_line);
+                println!("{}", error_line);
 
                 // Print indicator line
                 let mut indicator_line = String::new();
@@ -107,10 +107,10 @@ impl Error {
                 for _ in 0..self.error_length.max(1) {
                     indicator_line.push('^');
                 }
-                println!("\t{}", indicator_line.red());
+                println!("{}", indicator_line.red());
             }
         } else {
-            println!("\t<Source not available>");
+            println!("<Source not available>");
         }
 
         let error_kind_text = match self.kind {
