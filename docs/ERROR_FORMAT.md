@@ -16,10 +16,18 @@ New error format proposal:
 ```
 >>> do sayln("Hello world");
 
-ERROR:
+Uncaught Exception:
 File <stdin>, line 1, column 24 (1:24)
     do sayln("Hello world");
                            ^
                        
 SyntaxError: Unexpected Token
 ```
+
+Colors:
+
+- `Uncaught Exception:` in red
+- `File <stdin>, line 1, column 24 (1:24)` in yellow
+- `SyntaxError:` in red
+- `Unexpected Token` in white
+- Source code line in white
