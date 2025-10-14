@@ -1,1 +1,1 @@
-pub use dosato_lexer::*;
+pub use dosato_runtime::*;

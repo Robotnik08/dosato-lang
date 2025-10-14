@@ -1,10 +1,10 @@
 use crate::structures::{keywords, operators, tokens};
 
-mod structures {
-    pub mod tokens;
-    pub mod keywords;
-    pub mod operators;
-}
+mod structures;
+
+pub use tokens::*;
+pub use keywords::*;
+pub use operators::*;
 
 pub struct Lexer {
     source: String,
