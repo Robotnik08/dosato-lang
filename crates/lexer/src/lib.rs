@@ -13,6 +13,8 @@ pub struct Lexer {
     column: usize,
 }
 
+const MAX_TEMPLATE_DEPTH: usize = 256;
+
 impl Lexer {
     pub fn new(source: &str) -> Self {
         Self {
@@ -31,8 +33,8 @@ impl Lexer {
 
         let mut template_n = 0; // 0 means not in template, >0 means in template
         let mut current_template_id: u16 = 0;
-        let mut template_bracket_depths: [u16; 256] = [0; 256];
-        let mut template_ids: [u16; 256] = [0; 256];
+        let mut template_bracket_depths: [u16; MAX_TEMPLATE_DEPTH] = [0; MAX_TEMPLATE_DEPTH];
+        let mut template_ids: [u16; MAX_TEMPLATE_DEPTH] = [0; MAX_TEMPLATE_DEPTH];
 
         let mut bracket_depth = 0;
 
@@ -368,7 +370,7 @@ impl Lexer {
                     };
                     self.advance(); // Skip opening backtick
 
-                    if template_n >= 256 {
+                    if template_n >= MAX_TEMPLATE_DEPTH {
                         // ERR Too many nested templates
                         continue;
                     }
