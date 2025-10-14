@@ -16,7 +16,9 @@ impl Clone for ErrorKind {
 
 pub struct Error {
     pub message: String,
-    pub token_index: usize,
+    pub line: usize,
+    pub column: usize,
+    pub error_length: usize, // Length of the error in characters starting from the column
     pub exception: bool, // Whether this error is a runtime exception or a compile-time error
     pub kind: ErrorKind,
     pub source: String // Track the source of the error
@@ -24,7 +26,13 @@ pub struct Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} at token index {} in source:\n{}", self.message.red().bold(), self.token_index, self.source)
+        let kind_text = match self.kind {
+            ErrorKind::Error => "Error",
+            ErrorKind::SyntaxError => "SyntaxError",
+            ErrorKind::RuntimeError => "RuntimeError",
+            ErrorKind::TypeError => "TypeError",
+        };
+        write!(f, "<{}: {}>", kind_text, self.message)
     }
 }
 
@@ -32,7 +40,9 @@ impl Clone for Error {
     fn clone(&self) -> Self {
         Self {
             message: self.message.clone(),
-            token_index: self.token_index,
+            line: self.line,    
+            column: self.column,
+            error_length: self.error_length,
             exception: self.exception,
             kind: self.kind.clone(),
             source: self.source.clone()
@@ -41,10 +51,12 @@ impl Clone for Error {
 }
 
 impl Error {
-    pub fn new(message: String, token_index: usize, exception: bool, kind: ErrorKind, source: String) -> Self {
+    pub fn new(message: String, line: usize, column: usize, error_length: usize, exception: bool, kind: ErrorKind, source: String) -> Self {
         Self {
             message,
-            token_index,
+            line,
+            column,
+            error_length,
             exception,
             kind,
             source
@@ -53,15 +65,61 @@ impl Error {
 
     pub fn display(&self) {
         if self.exception {
-            let exception_text = "Uncaught Exception".red();
+            let exception_text = "Uncaught Exception:".red();
             println!("{}", exception_text);
-        } else {
-            let error_text = "Compiler Error".red();
-            println!("{}", error_text);
         }
+
+        let file_string = format!("File \"{}\"", self.source).yellow();
+        println!("{}", file_string);
+
+        let error_kind_text = match self.kind {
+            ErrorKind::Error => "Error:".red().bold(),
+            ErrorKind::SyntaxError => "SyntaxError:".red().bold(),
+            ErrorKind::RuntimeError => "RuntimeError:".red().bold(),
+            ErrorKind::TypeError => "TypeError:".red().bold(),
+        };
+
+        println!("\n{}: {}", error_kind_text, self.message);
     }
 
-    pub fn display_with_source(&self, _source_map: crate::source::SourceMap) {
-        // temp
+    pub fn display_with_source(&self, source_map: crate::source::SourceMap) {
+        if self.exception {
+            let exception_text = "Uncaught Exception:".red();
+            println!("{}", exception_text);
+        }
+
+        let file_string = format!("File \"{}\", line {}, column {} ({}:{})", self.source, self.line, self.column, 
+                                                                         self.line, self.column).yellow();
+        println!("{}", file_string);
+        
+        // get source from source map
+        if let Some(source) = source_map.get(&self.source) {
+            let lines: Vec<&str> = source.lines().collect();
+            if self.line > 0 && self.line <= lines.len() {
+                let error_line = lines[self.line - 1];
+                println!("\t{}", error_line);
+
+                // Print indicator line
+                let mut indicator_line = String::new();
+                for _ in 0..(self.column - 1) {
+                    indicator_line.push(' ');
+                }
+                for _ in 0..self.error_length.max(1) {
+                    indicator_line.push('^');
+                }
+                println!("\t{}", indicator_line.red());
+            }
+        } else {
+            println!("\t<Source not available>");
+        }
+
+        let error_kind_text = match self.kind {
+            ErrorKind::Error => "Error:".red().bold(),
+            ErrorKind::SyntaxError => "SyntaxError:".red().bold(),
+            ErrorKind::RuntimeError => "RuntimeError:".red().bold(),
+            ErrorKind::TypeError => "TypeError:".red().bold(),
+        };
+
+        println!("{} {}", error_kind_text, self.message);
     }
 }

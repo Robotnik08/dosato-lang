@@ -46,6 +46,7 @@ dependencies = [
 name = "dosato-lexer"
 version = "0.1.0"
 dependencies = [
+ "dosato-runtime",
  "phf",
 ]
 
@@ -58,7 +59,6 @@ name = "dosato-runtime"
 version = "0.1.0"
 dependencies = [
  "colored_text",
- "dosato-lexer",
 ]
 
 [[package]]

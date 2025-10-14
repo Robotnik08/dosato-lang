@@ -1,4 +1,5 @@
 use crate::structures::{keywords, operators, tokens};
+use dosato_runtime::*;
 
 mod structures;
 
@@ -25,7 +26,7 @@ impl Lexer {
         }
     }
 
-    pub fn tokenise(&mut self) -> Vec<tokens::Token> {
+    pub fn tokenise(&mut self) -> Result<Vec<tokens::Token>, error::Error> {
         let mut tokens = Vec::new();
         self.remove_windows_carriage_returns(); // Normalize line endings
         let chars: Vec<char> = self.source.chars().collect();
@@ -119,7 +120,15 @@ impl Lexer {
                         if chars[self.position] == '.' {
                             if has_dot {
                                 // ERR Invalid number format (multiple dots)
-                                break;
+                                return Err(error::Error::new(
+                                    "Invalid number format".to_string(),
+                                    self.line,
+                                    self.column,
+                                    1,
+                                    false,
+                                    error::ErrorKind::SyntaxError,
+                                    "main".to_string(),
+                                ));
                             }
                             has_dot = true;
                         }
@@ -566,7 +575,8 @@ impl Lexer {
                 }
             }
         }
-        tokens
+
+        Ok(tokens)
     }
 
     fn advance(&mut self) {

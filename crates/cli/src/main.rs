@@ -10,9 +10,14 @@ fn main() {
 
     let filename = &args[1];
     let source = fs::read_to_string(filename).expect("Failed to read file");
-    let _source_map = dosato_core::source::SourceMap::new(); // Initialize an empty source map
+    let mut source_map = dosato_core::source::SourceMap::new(); // Initialize an empty source map
+
+    source_map.insert(
+        "main".to_string(),
+        source.clone()
+    );
 
     dosato_core::eval_simple(&source).unwrap_or_else(|e: dosato_core::error::Error| {
-        e.display();
+        e.display_with_source(source_map);
     });
 }
