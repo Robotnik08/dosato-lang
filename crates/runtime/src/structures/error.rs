@@ -51,7 +51,7 @@ impl Clone for Error {
 }
 
 impl Error {
-    pub fn new(message: String, line: usize, column: usize, error_length: usize, exception: bool, kind: ErrorKind, source: String) -> Self {
+    pub fn new(kind: ErrorKind, message: String, source: String, line: usize, column: usize, error_length: usize, exception: bool) -> Self {
         Self {
             message,
             line,
@@ -88,7 +88,7 @@ impl Error {
             println!("{}", exception_text);
         }
 
-        let file_string = format!("File \"{}\", line {}, column {} ({}:{})", self.source, self.line, self.column, 
+        let file_string = format!("File \"{}\": line {}, column {} ({}:{})", self.source, self.line, self.column, 
                                                                          self.line, self.column).yellow();
         println!("{}", file_string);
         
