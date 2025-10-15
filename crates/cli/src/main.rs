@@ -10,13 +10,14 @@ fn main() {
 
     let filename = &args[1];
     let source = fs::read_to_string(filename).expect("Failed to read file");
+    let mut source_map = dosato_core::source::SourceMap::new(); // Initialize an empty source map
 
-    let mut lexer = dosato_core::Lexer::new(&source);
-    let tokens = lexer.tokenise();
+    source_map.insert(
+        "main".to_string(),
+        source.clone()
+    );
 
-    println!("Token amount: {}", tokens.len());
-
-    for token in tokens {
-        println!("{:?}", token);
-    }
+    dosato_core::eval_simple(&source).unwrap_or_else(|e: dosato_core::error::Error| {
+        e.display_with_source(source_map);
+    });
 }

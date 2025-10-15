@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+dosato-runtime = { path = "../runtime" }
+
 phf = { version = "0.13.1", features = ["macros"] }

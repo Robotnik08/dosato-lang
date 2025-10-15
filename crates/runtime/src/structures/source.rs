@@ -1,0 +1,1 @@
+pub type SourceMap = std::collections::HashMap<String, String>;
