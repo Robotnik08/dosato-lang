@@ -52,6 +52,23 @@ pub enum Node {
     },
 }
 
+pub enum NodeType {
+    Program,
+    Block,
+    Statement,
+    Expression,
+    BinaryExpression,
+    UnaryExpressionPrefix,
+    UnaryExpressionPostfix,
+    Literal,
+    Identifier,
+    CallExpression,
+    MemberExpression,
+    VariableDeclaration,
+    FunctionDeclaration,
+    FunctionParameter
+}
+
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
