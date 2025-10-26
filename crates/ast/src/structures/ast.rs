@@ -1,4 +1,6 @@
 pub enum Node {
+    Blank,
+
     Program(Vec<Node>),
     Block(Vec<Node>),
     Statement(Box<Node>),
@@ -35,7 +37,7 @@ pub enum Node {
         constant: bool,
         uses_array_unwrapping: bool,
         identifiers: Vec<u16>, // ids based on the identifier table
-        values: Vec<Box<Node>>, // parallel to identifiers
+        values: Vec<Node>, // parallel to identifiers
     },
 
     FunctionDeclaration {
@@ -50,6 +52,14 @@ pub enum Node {
         type_annotation: Option<dosato_lexer::KeyWord>,
         default_value: Option<Box<Node>>,
     },
+
+    // Master bodies
+    Do { // Outer do, encapsulates the body and any potential extensions
+        body: Vec<Node>
+    },
+    DoBody { // Inner body of a do statement
+        body: Box<Node>
+    }
 }
 
 pub enum NodeType {
@@ -66,12 +76,17 @@ pub enum NodeType {
     MemberExpression,
     VariableDeclaration,
     FunctionDeclaration,
-    FunctionParameter
+    FunctionParameter,
+
+    Do,
+    DoBody
 }
 
 impl std::fmt::Debug for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Node::Blank => write!(f, "Blank"),
+
             Node::Program(body) => f.debug_struct("Program").field("body", body).finish(),
             Node::Block(body) => f.debug_struct("Block").field("body", body).finish(),
             Node::Statement(statement) => f.debug_struct("Statement").field("statement", statement).finish(),
@@ -86,6 +101,9 @@ impl std::fmt::Debug for Node {
             Node::VariableDeclaration { type_annotation, constant, uses_array_unwrapping, identifiers, values } => f.debug_struct("VariableDeclaration").field("type_annotation", type_annotation).field("constant", constant).field("uses_array_unwrapping", uses_array_unwrapping).field("identifiers", identifiers).field("values", values).finish(),
             Node::FunctionDeclaration { name, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("name", name).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
             Node::FunctionParameter { name, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("name", name).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
+
+            Node::Do { body } => f.debug_struct("Do").field("body", body).finish(),
+            Node::DoBody { body } => f.debug_struct("DoBody").field("expression", body).finish(),
         }
     }
 }

@@ -33,6 +33,17 @@ pub enum BracketType {
     Bracket(u16),
 }
 
+impl PartialEq for BracketType {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BracketType::Parenthesis(_), BracketType::Parenthesis(_)) => true,
+            (BracketType::Brace(_), BracketType::Brace(_)) => true,
+            (BracketType::Bracket(_), BracketType::Bracket(_)) => true,
+            _ => false,
+        }
+    }
+}
+
 pub struct StringTemplatePart {
     pub id: u16,            // id for identifying which template this part belongs to
     pub value: String,      // The string content of the template part

@@ -242,6 +242,24 @@ impl KeyWord {
         )
     }
 
+    pub fn allow_extension_keywords(&self) -> bool {
+        matches!(self,
+            KeyWord::Do
+            | KeyWord::If
+            | KeyWord::IfNot
+            | KeyWord::Set
+            | KeyWord::Return
+            | KeyWord::For
+            | KeyWord::While
+            | KeyWord::Until
+            | KeyWord::Loop
+            | KeyWord::Break
+            | KeyWord::Continue
+            | KeyWord::Switch
+            | KeyWord::Match
+        )
+    }
+
     pub fn check_keyword(s: &str) -> Option<KeyWord> {
         KEYWORD_MAP.get(s).copied()
     }

@@ -120,7 +120,7 @@ impl Lexer {
                         if chars[self.position] == '.' {
                             if has_dot {
                                 return Err(error::Error::new(
-                                    error::ErrorKind::SyntaxError, "Invalid number format".to_string(), "main".to_string(), self.line, self.column, 1, false
+                                    error::ErrorKind::SyntaxError, "Invalid number format".to_string(), "main".to_string(), (self.line, self.column, 1), false
                                 ));
                             }
                             has_dot = true;
@@ -195,7 +195,7 @@ impl Lexer {
                         bracket_depth -= 1;
                     } else {
                         return Err(error::Error::new(
-                            error::ErrorKind::SyntaxError, "Unmatched closing bracket".to_string(), "main".to_string(), self.line, self.column, 1, false
+                            error::ErrorKind::SyntaxError, "Unmatched closing bracket".to_string(), "main".to_string(), (self.line, self.column, 1), false
                         ));
                     }
 
@@ -304,7 +304,7 @@ impl Lexer {
                         ));
                     } else {
                         return Err(error::Error::new(
-                            error::ErrorKind::SyntaxError, "Unterminated string literal".to_string(), "main".to_string(), self.line, self.column, 1, false
+                            error::ErrorKind::SyntaxError, "Unterminated string literal".to_string(), "main".to_string(), (self.line, self.column, 1), false
                         ));
                     }
                 }
@@ -334,7 +334,7 @@ impl Lexer {
                                 '0' => '\0',
                                 _ => {
                                     return Err(error::Error::new(
-                                        error::ErrorKind::SyntaxError, "Invalid escape sequence in char literal".to_string(), "main".to_string(), self.line, self.column, 1, false
+                                        error::ErrorKind::SyntaxError, "Invalid escape sequence in char literal".to_string(), "main".to_string(), (self.line, self.column, 1), false
                                     ));
                                 }
                             };
@@ -348,12 +348,12 @@ impl Lexer {
                                 ));
                             } else {
                                 return Err(error::Error::new(
-                                    error::ErrorKind::SyntaxError, "Unterminated char literal".to_string(), "main".to_string(), self.line, self.column, 1, false
+                                    error::ErrorKind::SyntaxError, "Unterminated char literal".to_string(), "main".to_string(), (self.line, self.column, 1), false
                                 ));
                             }
                         } else if char_content == '\'' || char_content == '\n' || char_content == '\r' || char_content == '\t'{
                             return Err(error::Error::new(
-                                error::ErrorKind::SyntaxError, "Invalid character in char literal".to_string(), "main".to_string(), self.line, self.column, 1, false
+                                error::ErrorKind::SyntaxError, "Invalid character in char literal".to_string(), "main".to_string(), (self.line, self.column, 1), false
                             ));
                         } else if self.position < length && chars[self.position] == '\'' {
                             self.advance(); // Skip closing quote
@@ -364,12 +364,12 @@ impl Lexer {
                             ));
                         } else {
                             return Err(error::Error::new(
-                                error::ErrorKind::SyntaxError, "Unterminated char literal".to_string(), "main".to_string(), self.line, self.column, 1, false
+                                error::ErrorKind::SyntaxError, "Unterminated char literal".to_string(), "main".to_string(), (self.line, self.column, 1), false
                             ));
                         }
                     } else {
                         return Err(error::Error::new(
-                            error::ErrorKind::SyntaxError, "Unterminated char literal".to_string(), "main".to_string(), self.line, self.column, 1, false
+                            error::ErrorKind::SyntaxError, "Unterminated char literal".to_string(), "main".to_string(), (self.line, self.column, 1), false
                         ));
                     }
                 }
@@ -385,7 +385,7 @@ impl Lexer {
 
                     if template_n >= MAX_TEMPLATE_DEPTH {
                         return Err(error::Error::new(
-                            error::ErrorKind::SyntaxError, "Maximum template string depth exceeded".to_string(), "main".to_string(), self.line, self.column, 1, false
+                            error::ErrorKind::SyntaxError, "Maximum template string depth exceeded".to_string(), "main".to_string(), (self.line, self.column, 1), false
                         ));
                     }
                     
@@ -443,7 +443,7 @@ impl Lexer {
 
                     if self.position >= length && template_n > 0 {
                         return Err(error::Error::new(
-                            error::ErrorKind::SyntaxError, "Unterminated template string".to_string(), "main".to_string(), self.line, self.column, 1, false
+                            error::ErrorKind::SyntaxError, "Unterminated template string".to_string(), "main".to_string(), (self.line, self.column, 1), false
                         ));
                     }
 
@@ -583,7 +583,7 @@ impl Lexer {
                     } else {
                         // Unknown character
                         return Err(error::Error::new(
-                            error::ErrorKind::SyntaxError, format!("Unexpected character: '{}'", current_char), "main".to_string(), self.line, self.column, 1, false
+                            error::ErrorKind::SyntaxError, format!("Unexpected character: '{}'", current_char), "main".to_string(), (self.line, self.column, 1), false
                         ));
                     }
                 }
