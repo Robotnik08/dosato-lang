@@ -137,17 +137,19 @@ impl Parser {
                 let mut found_operator = false;
                 let mut operator_index = span.0;
                 let mut operator_precedence = 0; // lowest precedence
+                let mut last_operator_was_unary_postfix = false;
                 while index < span.1 {
                     let token = &self.tokens[index];
                     skip_block!(self, index, span);
                     if let TokenKind::Operator(op) = &token.kind {
                         let precedence = op.precedence();
                         if precedence >= operator_precedence {
-                            if found_operator && op.is_unary_prefix() && operator_index == index - 1 {
+                            if found_operator && op.is_unary_prefix() && !last_operator_was_unary_postfix && operator_index == index - 1 {
                                 index += 1;
                                 continue; // skip unary prefix operators in a row
                             }
                             found_operator = true;
+                            last_operator_was_unary_postfix = op.is_unary_postfix();
                             operator_index = index;
                             operator_precedence = if index == span.0 && op.is_unary_prefix() { UNARY_PREFIX_PRECEDENCE } else { precedence };
                         }
@@ -175,6 +177,26 @@ impl Parser {
                         return Ok(Node::UnaryExpressionPrefix {
                             operator: operator,
                             argument: Box::new(right),
+                        });
+                    } else if operator_index == span.1 - 1 { // unary postfix
+                        let left = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
+                        let operator_token = &self.tokens[operator_index];
+                        let operator = match &operator_token.kind {
+                            TokenKind::Operator(op) => *op,
+                            _ => {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                );
+                            }
+                        };
+                        if !operator.is_unary_postfix() {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Operator is not a unary postfix operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                            );
+                        }
+                        return Ok(Node::UnaryExpressionPostfix {
+                            operator: operator,
+                            argument: Box::new(left),
                         });
                     } else { // binary
                         let left = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
