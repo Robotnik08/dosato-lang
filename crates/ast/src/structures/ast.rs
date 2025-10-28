@@ -53,6 +53,10 @@ pub enum Node {
         default_value: Option<Box<Node>>,
     },
 
+    ArrayExpression {
+        elements: Vec<Node>,
+    },
+
     // Master bodies
     Do { // Outer do, encapsulates the body and any potential extensions
         body: Vec<Node>
@@ -77,6 +81,7 @@ pub enum NodeType {
     VariableDeclaration,
     FunctionDeclaration,
     FunctionParameter,
+    ArrayExpression,
 
     Do,
     DoBody
@@ -101,6 +106,7 @@ impl std::fmt::Debug for Node {
             Node::VariableDeclaration { type_annotation, constant, uses_array_unwrapping, identifiers, values } => f.debug_struct("VariableDeclaration").field("type_annotation", type_annotation).field("constant", constant).field("uses_array_unwrapping", uses_array_unwrapping).field("identifiers", identifiers).field("values", values).finish(),
             Node::FunctionDeclaration { name, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("name", name).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
             Node::FunctionParameter { name, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("name", name).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
+            Node::ArrayExpression { elements } => f.debug_struct("ArrayExpression").field("elements", elements).finish(),
 
             Node::Do { body } => f.debug_struct("Do").field("body", body).finish(),
             Node::DoBody { body } => f.debug_struct("DoBody").field("expression", body).finish(),

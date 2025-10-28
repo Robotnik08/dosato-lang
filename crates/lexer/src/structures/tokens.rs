@@ -36,9 +36,9 @@ pub enum BracketType {
 impl PartialEq for BracketType {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (BracketType::Parenthesis(_), BracketType::Parenthesis(_)) => true,
-            (BracketType::Brace(_), BracketType::Brace(_)) => true,
-            (BracketType::Bracket(_), BracketType::Bracket(_)) => true,
+            (BracketType::Parenthesis(a), BracketType::Parenthesis(b)) => a == b,
+            (BracketType::Brace(a), BracketType::Brace(b)) => a == b,
+            (BracketType::Bracket(a), BracketType::Bracket(b)) => a == b,
             _ => false,
         }
     }

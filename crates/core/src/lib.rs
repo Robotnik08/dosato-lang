@@ -9,8 +9,10 @@ pub fn eval_simple(source: &str) -> Result<(), error::Error> {
     
     println!("Token amount: {}", tokens.len());
 
+    let mut index = 0;
     for token in tokens {
-        println!("{:?}", token);
+        println!("{}. {:?}", index, token);
+        index += 1;
     }
 
     let ast = parser.parse()?;

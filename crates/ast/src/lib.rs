@@ -96,12 +96,44 @@ impl Parser {
 
         false
     }
+
+    pub fn encased_in_square_brackets(&self, span: (usize, usize)) -> bool {
+        if span.1 - span.0 < 2 {
+            return false;
+        }
+
+        if let TokenKind::BracketOpen(BracketType::Bracket(_)) = &self.tokens[span.0].kind {
+            if let TokenKind::BracketClose(BracketType::Bracket(_)) = &self.tokens[span.1 - 1].kind {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    pub fn encased_in_curly_braces(&self, span: (usize, usize)) -> bool {
+        if span.1 - span.0 < 2 {
+            return false;
+        }
+
+        if let TokenKind::BracketOpen(BracketType::Brace(_)) = &self.tokens[span.0].kind {
+            if let TokenKind::BracketClose(BracketType::Brace(_)) = &self.tokens[span.1 - 1].kind {
+                return true;
+            }
+        }
+
+        false
+    }
     
     pub fn parse_node(&self, node_type: NodeType, span: (usize, usize)) -> Result<Node, error::Error> {
         match node_type {
             NodeType::Expression => {
                 if self.encased_in_parentheses(span) {
                     return self.parse_node(NodeType::Expression, (span.0 + 1, span.1 - 1));
+                }
+
+                if self.encased_in_square_brackets(span) {
+                    return self.parse_node(NodeType::ArrayExpression, (span.0 + 1, span.1 - 1));
                 }
 
                 if span.1 - span.0 == 1 {
@@ -218,11 +250,39 @@ impl Parser {
                     }
                 }
 
-                println!("Span: {:?}", span);
-
                 Err(
-                    error::Error::new(error::ErrorKind::SyntaxError, "Invalid expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
+                    error::Error::new(error::ErrorKind::SyntaxError, "Invalid expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.1 - 1]), false)
                 )
+            }
+
+            NodeType::ArrayExpression => {
+                let mut elements: Vec<Node> = Vec::new();
+
+                if span.0 == span.1 {
+                    return Ok(Node::ArrayExpression { elements });
+                }
+
+                let mut index = span.0;
+                let mut current_element_start = index;
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Comma = op {
+                            let element = self.parse_node(NodeType::Expression, (current_element_start, index))?;
+                            elements.push(element);
+                            current_element_start = index + 1;
+                        }
+                    }
+                    index += 1;
+                }
+
+                if index > current_element_start {
+                    let element = self.parse_node(NodeType::Expression, (current_element_start, index))?;
+                    elements.push(element);
+                }
+
+                Ok(Node::ArrayExpression { elements })
             }
             
             NodeType::Program => {
