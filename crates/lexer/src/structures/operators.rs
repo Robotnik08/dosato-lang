@@ -223,6 +223,8 @@ impl std::fmt::Debug for Operator {
     }
 }
 
+pub const UNARY_PREFIX_PRECEDENCE: u8 = 1;
+
 impl Operator {
     /// Return precedence: lower numbers bind more tightly (you mentioned lower => higher precedence).
     /// I kept your numeric mapping idea: smaller number = higher priority.
@@ -277,7 +279,7 @@ impl Operator {
     }
 
     /// Is this a unary operator?
-    pub fn is_unary(&self) -> bool {
+    pub fn is_unary_prefix(&self) -> bool {
         matches!(self,
             Operator::Not 
             | Operator::Increment 
@@ -288,6 +290,13 @@ impl Operator {
             | Operator::Root
             | Operator::Add
             | Operator::Multiply
+        )
+    }
+
+    pub fn is_unary_postfix(&self) -> bool {
+        matches!(self,
+            Operator::Increment
+            | Operator::Decrement
         )
     }
 

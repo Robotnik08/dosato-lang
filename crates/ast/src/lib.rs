@@ -107,7 +107,7 @@ impl Parser {
                 if span.1 - span.0 == 1 {
                     let token = &self.tokens[span.0];
                     match &token.kind {
-                        TokenKind::Identifier(id) => {
+                        TokenKind::Identifier(_) => {
                             return Ok(Node::Identifier(0));
                         }
                         TokenKind::IntegerLiteral(_) | 
@@ -132,8 +132,75 @@ impl Parser {
                         error::Error::new(error::ErrorKind::SyntaxError, "Empty expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
                     );
                 }
+                
+                let mut index = span.0;
+                let mut found_operator = false;
+                let mut operator_index = span.0;
+                let mut operator_precedence = 0; // lowest precedence
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        let precedence = op.precedence();
+                        if precedence >= operator_precedence {
+                            if found_operator && op.is_unary_prefix() && operator_index == index - 1 {
+                                index += 1;
+                                continue; // skip unary prefix operators in a row
+                            }
+                            found_operator = true;
+                            operator_index = index;
+                            operator_precedence = if index == span.0 && op.is_unary_prefix() { UNARY_PREFIX_PRECEDENCE } else { precedence };
+                        }
+                    }
+                    index += 1;
+                }
 
-                Ok(Node::Blank)
+                if found_operator {
+                    if operator_index == span.0 { // unary prefix
+                        let right = self.parse_node(NodeType::Expression, (operator_index + 1, span.1))?;
+                        let operator_token = &self.tokens[operator_index];
+                        let operator = match &operator_token.kind {
+                            TokenKind::Operator(op) => *op,
+                            _ => {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                );
+                            }
+                        };
+                        if !operator.is_unary_prefix() {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Operator is not a unary prefix operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                            );
+                        }
+                        return Ok(Node::UnaryExpressionPrefix {
+                            operator: operator,
+                            argument: Box::new(right),
+                        });
+                    } else { // binary
+                        let left = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
+                        let right = self.parse_node(NodeType::Expression, (operator_index + 1, span.1))?;
+                        let operator_token = &self.tokens[operator_index];
+                        let operator = match &operator_token.kind {
+                            TokenKind::Operator(op) => *op,
+                            _ => {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                );
+                            }
+                        };
+                        return Ok(Node::BinaryExpression {
+                            left: Box::new(left),
+                            operator: operator,
+                            right: Box::new(right),
+                        });
+                    }
+                }
+
+                println!("Span: {:?}", span);
+
+                Err(
+                    error::Error::new(error::ErrorKind::SyntaxError, "Invalid expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
+                )
             }
             
             NodeType::Program => {

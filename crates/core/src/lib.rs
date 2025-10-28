@@ -6,14 +6,14 @@ pub fn eval_simple(source: &str) -> Result<(), error::Error> {
     let mut lexer = dosato_lexer::Lexer::new(source);
     let tokens = lexer.tokenise()?;
     let parser = dosato_ast::Parser::new(tokens.clone(), Some("main".to_string()));
-
-    let ast = parser.parse()?;
-
+    
     println!("Token amount: {}", tokens.len());
 
     for token in tokens {
         println!("{:?}", token);
     }
+
+    let ast = parser.parse()?;
 
     println!("{:#?}", ast);
 

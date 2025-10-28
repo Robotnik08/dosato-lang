@@ -590,6 +590,12 @@ impl Lexer {
             }
         }
 
+        if bracket_depth != 0 {
+            return Err(error::Error::new(
+                error::ErrorKind::SyntaxError, "Unclosed bracket".to_string(), "main".to_string(), (self.line, self.column, 1), false
+            ));
+        }
+
         Ok(tokens)
     }
 
