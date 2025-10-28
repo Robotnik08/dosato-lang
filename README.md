@@ -19,16 +19,13 @@ Rust, with its strong type system and memory safety guarantees, seemed like a be
 ## Progress
 
 ### cDosato recreation progress:
-![](https://geps.dev/progress/10)
+![](https://geps.dev/progress/15)
 
 ### Lexer progress:
 ![](https://geps.dev/progress/95)
 
 ### Parser progress:
-![](https://geps.dev/progress/0)
-
-### AST progress:
-![](https://geps.dev/progress/0)
+![](https://geps.dev/progress/20)
 
 ### Compiler progress:
 ![](https://geps.dev/progress/0)
