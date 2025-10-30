@@ -64,6 +64,11 @@ pub enum Node {
         value: Box<Node>,
     },
 
+    TypeCastExpression {
+        expression: Box<Node>,
+        target_type: dosato_lexer::KeyWord,
+    },
+
     // Master bodies
     Do { // Outer do, encapsulates the body and any potential extensions
         body: Vec<Node>
@@ -118,6 +123,7 @@ impl std::fmt::Debug for Node {
             Node::CallingArguments { arguments } => f.debug_struct("CallingArguments").field("arguments", arguments).finish(),
             Node::ObjectExpression { properties } => f.debug_struct("ObjectExpression").field("properties", properties).finish(),
             Node::ObjectProperty { key, value } => f.debug_struct("ObjectProperty").field("key", key).field("value", value).finish(),
+            Node::TypeCastExpression { expression, target_type } => f.debug_struct("TypeCastExpression").field("expression", expression).field("target_type", target_type).finish(),
 
             Node::Do { body } => f.debug_struct("Do").field("body", body).finish(),
             Node::DoBody { body } => f.debug_struct("DoBody").field("expression", body).finish(),

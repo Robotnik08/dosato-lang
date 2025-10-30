@@ -572,6 +572,13 @@ impl Lexer {
                                 (start_char_position, self.position),
                                 start_position,
                             ));
+                        } else if word == "as" {
+                            // type cast operator
+                            tokens.push(tokens::Token::new(
+                                tokens::TokenKind::Operator(operators::Operator::TypeCast),
+                                (start_char_position, self.position),
+                                start_position,
+                            ));
                         } else {
                             // identifier
                             tokens.push(tokens::Token::new(

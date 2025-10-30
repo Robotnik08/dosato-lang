@@ -262,8 +262,6 @@ impl Parser {
                             argument: Box::new(left),
                         });
                     } else { // binary
-                        let left = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
-                        let right = self.parse_node(NodeType::Expression, (operator_index + 1, span.1))?;
                         let operator_token = &self.tokens[operator_index];
                         let operator = match &operator_token.kind {
                             TokenKind::Operator(op) => *op,
@@ -273,6 +271,39 @@ impl Parser {
                                 );
                             }
                         };
+
+                        if let Operator::TypeCast = operator {
+                            // type cast operator
+                            // check if right has 1 token and is a type keyword
+                            if operator_index + 1 != span.1 - 1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Type cast operator must be followed by a single type keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(operator_index + 1, span.1 - 1), false)
+                                );
+                            }
+
+                            let right_token = &self.tokens[operator_index + 1];
+                            let right = match &right_token.kind {
+                                TokenKind::KeyWord(kw) => if kw.is_type_keyword() { *kw } else {
+                                    return Err(
+                                        error::Error::new(error::ErrorKind::SyntaxError, "Type cast operator must be followed by a type keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(operator_index + 1, operator_index + 1), false)
+                                    );
+                                },
+                                _ => {
+                                    return Err(
+                                        error::Error::new(error::ErrorKind::SyntaxError, "Type cast operator must be followed by a type keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(operator_index + 1, operator_index + 1), false)
+                                    );
+                                }
+                            };
+
+                            let left = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
+                            return Ok(Node::TypeCastExpression {
+                                expression: Box::new(left),
+                                target_type: right,
+                            });
+                        }
+
+                        let left = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
+                        let right = self.parse_node(NodeType::Expression, (operator_index + 1, span.1))?;
                         return Ok(Node::BinaryExpression {
                             left: Box::new(left),
                             operator: operator,
@@ -379,8 +410,8 @@ impl Parser {
                 }
 
                 Ok(Node::ObjectProperty {
-                    key: Box::new(self.parse_node(NodeType::Expression, span)?),
-                    value: Box::new(Node::Blank),
+                    key: Box::new(Node::Blank),
+                    value: Box::new(self.parse_node(NodeType::Expression, span)?),
                 })
             }
 
