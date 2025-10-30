@@ -93,10 +93,14 @@ impl Parser {
         if span.1 - span.0 < 2 {
             return false;
         }
-
-        if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &self.tokens[span.0].kind {
-            if let TokenKind::BracketClose(BracketType::Parenthesis(_)) = &self.tokens[span.1 - 1].kind {
-                return true;
+        
+        if let TokenKind::BracketOpen(BracketType::Parenthesis(depth_start)) = &self.tokens[span.0].kind {
+            for i in (span.0 + 1)..span.1 {
+                if let TokenKind::BracketClose(BracketType::Parenthesis(depth_end)) = &self.tokens[i].kind {
+                    if depth_start == depth_end {
+                        return i == span.1 - 1;
+                    }
+                }
             }
         }
 
@@ -108,9 +112,13 @@ impl Parser {
             return false;
         }
 
-        if let TokenKind::BracketOpen(BracketType::Bracket(_)) = &self.tokens[span.0].kind {
-            if let TokenKind::BracketClose(BracketType::Bracket(_)) = &self.tokens[span.1 - 1].kind {
-                return true;
+        if let TokenKind::BracketOpen(BracketType::Bracket(depth_start)) = &self.tokens[span.0].kind {
+            for i in (span.0 + 1)..span.1 {
+                if let TokenKind::BracketClose(BracketType::Bracket(depth_end)) = &self.tokens[i].kind {
+                    if depth_start == depth_end {
+                        return i == span.1 - 1;
+                    }
+                }
             }
         }
 
@@ -122,9 +130,13 @@ impl Parser {
             return false;
         }
 
-        if let TokenKind::BracketOpen(BracketType::Brace(_)) = &self.tokens[span.0].kind {
-            if let TokenKind::BracketClose(BracketType::Brace(_)) = &self.tokens[span.1 - 1].kind {
-                return true;
+        if let TokenKind::BracketOpen(BracketType::Brace(depth_start)) = &self.tokens[span.0].kind {
+            for i in (span.0 + 1)..span.1 {
+                if let TokenKind::BracketClose(BracketType::Brace(depth_end)) = &self.tokens[i].kind {
+                    if depth_start == depth_end {
+                        return i == span.1 - 1;
+                    }
+                }
             }
         }
 
@@ -173,25 +185,13 @@ impl Parser {
                 
                 let mut index = span.0;
                 let mut found_operator = false;
-                let mut found_function_call = false;
                 let mut operator_index = span.0;
                 let mut operator_precedence = 0; // lowest precedence
                 let mut last_operator_was_unary_postfix = false;
                 while index < span.1 {
                     let token = &self.tokens[index];
-
-                    // function call
-                    if index != span.0 && operator_index != index - 1 {
-                        if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &token.kind {
-                            found_operator = false;
-                            found_function_call = true;
-                            operator_index = index;
-                            operator_precedence = FUNCTION_CALL_PRECEDENCE;
-                            break;
-                        }
-                    }
-
                     skip_block!(self, index, span);
+
                     if let TokenKind::Operator(op) = &token.kind {
                         let precedence = op.precedence();
                         if precedence >= operator_precedence {
@@ -200,13 +200,20 @@ impl Parser {
                                 continue; // skip unary prefix operators in a row
                             }
                             found_operator = true;
-                            found_function_call = false;
                             last_operator_was_unary_postfix = op.is_unary_postfix();
                             operator_index = index;
                             operator_precedence = if index == span.0 && op.is_unary_prefix() { UNARY_PREFIX_PRECEDENCE } else { precedence };
                         }
                     }
                     index += 1;
+                }
+
+                if operator_precedence == 0 {
+                    // if last token is a closing parenthesis, it might be a call expression
+                    let last_token = &self.tokens[span.1 - 1];
+                    if let TokenKind::BracketClose(BracketType::Parenthesis(_)) = &last_token.kind {
+                        return self.parse_node(NodeType::CallExpression, span);
+                    }
                 }
 
                 if found_operator {
