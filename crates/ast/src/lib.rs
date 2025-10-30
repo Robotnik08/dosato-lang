@@ -355,7 +355,33 @@ impl Parser {
             }
 
             NodeType::ObjectProperty => {
-                // if 1 token, which is an iden
+                let mut index = span.0;
+                let mut found_colon = false;
+                let mut colon_index = span.0;
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Colon = op {
+                            found_colon = true;
+                            colon_index = index;
+                            break;
+                        }
+                    }
+                    index += 1;
+                }
+
+                if found_colon {
+                    return Ok(Node::ObjectProperty {
+                        key: Box::new(self.parse_node(NodeType::Expression, (span.0, colon_index))?),
+                        value: Box::new(self.parse_node(NodeType::Expression, (colon_index + 1, span.1))?),
+                    })
+                }
+
+                Ok(Node::ObjectProperty {
+                    key: Box::new(self.parse_node(NodeType::Expression, span)?),
+                    value: Box::new(Node::Blank),
+                })
             }
 
             NodeType::Program => {
