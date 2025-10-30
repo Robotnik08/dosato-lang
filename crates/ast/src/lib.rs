@@ -76,6 +76,10 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(tokens: Vec<dosato_lexer::Token>, source_name: Option<String>) -> Self {
+        // remove comments
+        let tokens = tokens.into_iter().filter(|token| {
+            !matches!(token.kind, dosato_lexer::TokenKind::Comment(_))
+        }).collect();
         Self { tokens, source_name }
     }
 
