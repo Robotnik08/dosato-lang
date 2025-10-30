@@ -5,16 +5,6 @@ pub use structures::ast::*;
 use dosato_runtime::*;
 use dosato_lexer::*;
 
-macro_rules! get_line_column_len {
-    ($start:expr, $end:expr) => {
-        (
-            $start.position.line,
-            $start.position.column,
-            $end.span.1 - $start.span.0
-        )
-    };
-}
-
 macro_rules! skip_block {
     ($self:ident, $index:ident, $span:ident) => {
         if let TokenKind::BracketOpen(bracket_type) = &$self.tokens[$index].kind {
@@ -33,7 +23,7 @@ macro_rules! skip_block {
                         error::ErrorKind::SyntaxError,
                         "Unclosed bracket".to_string(),
                         $self.source_name.clone().unwrap_or("".to_string()),
-                        get_line_column_len!($self.tokens[$index - 1], $self.tokens[$index - 1]),
+                        $self.get_line_column_len($index - 1, $index - 1),
                         false
                     )
                 )
@@ -60,7 +50,7 @@ macro_rules! skip_block_backwards {
                         error::ErrorKind::SyntaxError,
                         "Unclosed bracket".to_string(),
                         $self.source_name.clone().unwrap_or("".to_string()),
-                        get_line_column_len!($self.tokens[$index + 1], $self.tokens[$index + 1]),
+                        $self.get_line_column_len($index + 1, $index + 1),
                         false
                     )
                 )
@@ -85,6 +75,18 @@ impl Parser {
 
     pub fn parse(&self) -> Result<Node, error::Error> {
         self.parse_node(NodeType::Program, (0, self.tokens.len()))
+    }
+
+
+    fn get_line_column_len(&self, index1: usize, index2: usize) -> (usize, usize, usize) {
+        let token_length = self.tokens.len();
+        let start = &self.tokens[std::cmp::min(index1, token_length - 1)];
+        let end = &self.tokens[std::cmp::min(index2, token_length - 1)];
+        (
+            start.position.line,
+            start.position.column,
+            end.span.1 - start.span.0
+        )
     }
 
     pub fn encased_in_parentheses(&self, span: (usize, usize)) -> bool {
@@ -159,13 +161,13 @@ impl Parser {
 
                         _ => {
                             return Err(
-                                error::Error::new(error::ErrorKind::SyntaxError, "Expected an expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected an expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
                             );
                         }
                     }
                 } else if span.1 - span.0 == 0 {
                     return Err(
-                        error::Error::new(error::ErrorKind::SyntaxError, "Empty expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
+                        error::Error::new(error::ErrorKind::SyntaxError, "Empty expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
                     );
                 }
                 
@@ -201,13 +203,13 @@ impl Parser {
                             TokenKind::Operator(op) => *op,
                             _ => {
                                 return Err(
-                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[operator_index], self.tokens[operator_index]), false)
                                 );
                             }
                         };
                         if !operator.is_unary_prefix() {
                             return Err(
-                                error::Error::new(error::ErrorKind::SyntaxError, "Operator is not a unary prefix operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                error::Error::new(error::ErrorKind::SyntaxError, "Operator is not a unary prefix operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[operator_index], self.tokens[operator_index]), false)
                             );
                         }
                         return Ok(Node::UnaryExpressionPrefix {
@@ -221,13 +223,13 @@ impl Parser {
                             TokenKind::Operator(op) => *op,
                             _ => {
                                 return Err(
-                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[operator_index], self.tokens[operator_index]), false)
                                 );
                             }
                         };
                         if !operator.is_unary_postfix() {
                             return Err(
-                                error::Error::new(error::ErrorKind::SyntaxError, "Operator is not a unary postfix operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                error::Error::new(error::ErrorKind::SyntaxError, "Operator is not a unary postfix operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[operator_index], self.tokens[operator_index]), false)
                             );
                         }
                         return Ok(Node::UnaryExpressionPostfix {
@@ -242,7 +244,7 @@ impl Parser {
                             TokenKind::Operator(op) => *op,
                             _ => {
                                 return Err(
-                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[operator_index], self.tokens[operator_index]), false)
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[operator_index], self.tokens[operator_index]), false)
                                 );
                             }
                         };
@@ -255,7 +257,7 @@ impl Parser {
                 }
 
                 Err(
-                    error::Error::new(error::ErrorKind::SyntaxError, "Invalid expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.1 - 1]), false)
+                    error::Error::new(error::ErrorKind::SyntaxError, "Invalid expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[span.0], self.tokens[span.1 - 1]), false)
                 )
             }
 
@@ -328,7 +330,7 @@ impl Parser {
                     TokenKind::KeyWord(kw) => kw,
                     _ => {
                         return Err(
-                            error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[span.0], self.tokens[span.0]), false)
                         );
                     }
                 };
@@ -343,14 +345,18 @@ impl Parser {
                     }
                 } else {
                     Err(
-                        error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.0]), false)
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[span.0], self.tokens[span.0]), false)
                     )
                 }
             }
 
             NodeType::DoBody => {
-                let body = self.parse_node(NodeType::CallExpression, span)?;
-                Ok(Node::DoBody { body: Box::new(body) })
+                let body = self.parse_node(NodeType::Expression, span)?;
+                if let Node::CallExpression { .. } = body {
+                    Ok(Node::DoBody { body: Box::new(body) })
+                } else {
+                    Err(error::Error::new(error::ErrorKind::SyntaxError, "Expected function call or block".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[span.0], self.tokens[span.1 - 1]), false))
+                }
             }
 
             NodeType::CallExpression => {
@@ -369,19 +375,19 @@ impl Parser {
                         })
                     } else {
                         Err(
-                            error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[index], self.tokens[index]), false)
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[index], self.tokens[index]), false)
                         )
                     }
                 } else {
                     Err(
-                        error::Error::new(error::ErrorKind::SyntaxError, "Expected closing parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.1 - 1], self.tokens[span.1 - 1]), false)
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected closing parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[span.1 - 1], self.tokens[span.1 - 1]), false)
                     )
                 }
             }
 
             _ => {
                 Err(
-                    error::Error::new(error::ErrorKind::SyntaxError, "Unknown node type".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len!(self.tokens[span.0], self.tokens[span.1 - 1]), false)
+                    error::Error::new(error::ErrorKind::SyntaxError, "Unknown node type".to_string(), self.source_name.clone().unwrap_or("".to_string()), get_line_column_len(self.tokens[span.0], self.tokens[span.1 - 1]), false)
                 )
             }
         }
