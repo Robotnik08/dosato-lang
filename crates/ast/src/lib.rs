@@ -154,6 +154,10 @@ impl Parser {
                     return self.parse_node(NodeType::ArrayExpression, (span.0 + 1, span.1 - 1));
                 }
 
+                if self.encased_in_curly_braces(span) {
+                    return self.parse_node(NodeType::ObjectExpression, (span.0 + 1, span.1 - 1));
+                }
+
                 if span.1 - span.0 == 1 {
                     let token = &self.tokens[span.0];
                     match &token.kind {
@@ -282,11 +286,15 @@ impl Parser {
                 )
             }
 
-            NodeType::ArrayExpression => {
+            NodeType::ArrayExpression | NodeType::CallingArguments => {
                 let mut elements: Vec<Node> = Vec::new();
 
                 if span.0 == span.1 {
-                    return Ok(Node::ArrayExpression { elements });
+                    match node_type {
+                        NodeType::ArrayExpression => return Ok(Node::ArrayExpression { elements }),
+                        NodeType::CallingArguments => return Ok(Node::CallingArguments { arguments: elements }),
+                        _ => unreachable!(),
+                    }
                 }
 
                 let mut index = span.0;
@@ -309,9 +317,47 @@ impl Parser {
                     elements.push(element);
                 }
 
-                Ok(Node::ArrayExpression { elements })
+                match node_type {
+                    NodeType::ArrayExpression => Ok(Node::ArrayExpression { elements }),
+                    NodeType::CallingArguments => Ok(Node::CallingArguments { arguments: elements }),
+                    _ => unreachable!(),
+                }
             }
             
+            NodeType::ObjectExpression => {
+                let mut properties: Vec<Node> = Vec::new();
+                if span.0 == span.1 {
+                    return Ok(Node::ObjectExpression { properties });
+                }
+
+                let mut index = span.0;
+                let mut current_property_start = index;
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Comma = op {
+                            let property = self.parse_node(NodeType::ObjectProperty, (current_property_start, index))?;
+                            properties.push(property);
+                            current_property_start = index + 1;
+                        }
+                    }
+                    index += 1;
+                }
+
+                // remaining property
+                if index > current_property_start {
+                    let property = self.parse_node(NodeType::ObjectProperty, (current_property_start, index))?;
+                    properties.push(property);
+                }
+
+                Ok(Node::ObjectExpression { properties })
+            }
+
+            NodeType::ObjectProperty => {
+                // if 1 token, which is an iden
+            }
+
             NodeType::Program => {
                 let mut statements: Vec<Node> = Vec::new();
 
@@ -344,6 +390,7 @@ impl Parser {
 
                 Ok(Node::Program(statements))
             }
+            
             NodeType::Statement => {
                 // Get first keyword
                 let first_token = &self.tokens[span.0];
@@ -388,7 +435,7 @@ impl Parser {
                     let mut index = span.1 - 1;
                     skip_block_backwards!(self, index, span);
                     if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &self.tokens[index].kind {
-                        let arguments = Node::Blank;
+                        let arguments = self.parse_node(NodeType::CallingArguments, (index + 1, span.1 - 1))?;
                         let callee = self.parse_node(NodeType::Expression, (span.0, index))?;
                         Ok(Node::CallExpression {
                             callee: Box::new(callee),
