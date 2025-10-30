@@ -224,6 +224,7 @@ impl std::fmt::Debug for Operator {
 }
 
 pub const UNARY_PREFIX_PRECEDENCE: u8 = 1;
+pub const FUNCTION_CALL_PRECEDENCE: u8 = 1;
 
 impl Operator {
     /// Return precedence: lower numbers bind more tightly (you mentioned lower => higher precedence).

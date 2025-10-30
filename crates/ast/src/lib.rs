@@ -173,11 +173,24 @@ impl Parser {
                 
                 let mut index = span.0;
                 let mut found_operator = false;
+                let mut found_function_call = false;
                 let mut operator_index = span.0;
                 let mut operator_precedence = 0; // lowest precedence
                 let mut last_operator_was_unary_postfix = false;
                 while index < span.1 {
                     let token = &self.tokens[index];
+
+                    // function call
+                    if index != span.0 && operator_index != index - 1 {
+                        if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &token.kind {
+                            found_operator = false;
+                            found_function_call = true;
+                            operator_index = index;
+                            operator_precedence = FUNCTION_CALL_PRECEDENCE;
+                            break;
+                        }
+                    }
+
                     skip_block!(self, index, span);
                     if let TokenKind::Operator(op) = &token.kind {
                         let precedence = op.precedence();
@@ -187,6 +200,7 @@ impl Parser {
                                 continue; // skip unary prefix operators in a row
                             }
                             found_operator = true;
+                            found_function_call = false;
                             last_operator_was_unary_postfix = op.is_unary_postfix();
                             operator_index = index;
                             operator_precedence = if index == span.0 && op.is_unary_prefix() { UNARY_PREFIX_PRECEDENCE } else { precedence };
