@@ -51,7 +51,7 @@ impl Clone for Error {
 }
 
 impl Error {
-    pub fn new(kind: ErrorKind, message: String, source: String, line: usize, column: usize, error_length: usize, exception: bool) -> Self {
+    pub fn new(kind: ErrorKind, message: String, source: String, (line, column, error_length): (usize, usize, usize), exception: bool) -> Self {
         Self {
             message,
             line,

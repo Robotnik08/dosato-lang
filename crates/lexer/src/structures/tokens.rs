@@ -33,6 +33,17 @@ pub enum BracketType {
     Bracket(u16),
 }
 
+impl PartialEq for BracketType {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (BracketType::Parenthesis(a), BracketType::Parenthesis(b)) => a == b,
+            (BracketType::Brace(a), BracketType::Brace(b)) => a == b,
+            (BracketType::Bracket(a), BracketType::Bracket(b)) => a == b,
+            _ => false,
+        }
+    }
+}
+
 pub struct StringTemplatePart {
     pub id: u16,            // id for identifying which template this part belongs to
     pub value: String,      // The string content of the template part
@@ -54,6 +65,41 @@ impl Clone for TokenPosition {
         Self {
             line: self.line,
             column: self.column,
+        }
+    }
+}
+
+impl Clone for Token {
+    fn clone(&self) -> Self {
+        Self {
+            kind: match &self.kind {
+                TokenKind::Comment(content) => TokenKind::Comment(content.clone()),
+                TokenKind::StringLiteral(content) => TokenKind::StringLiteral(content.clone()),
+                TokenKind::CharLiteral(content) => TokenKind::CharLiteral(*content),
+                TokenKind::NumberLiteral(content) => TokenKind::NumberLiteral(*content),
+                TokenKind::IntegerLiteral(content) => TokenKind::IntegerLiteral(*content),
+                TokenKind::BooleanLiteral(content) => TokenKind::BooleanLiteral(*content),
+                TokenKind::Null => TokenKind::Null,
+                TokenKind::Infinity => TokenKind::Infinity,
+                TokenKind::NaN => TokenKind::NaN,
+                TokenKind::Operator(op) => TokenKind::Operator(*op),
+                TokenKind::KeyWord(kw) => TokenKind::KeyWord(*kw),
+                TokenKind::Identifier(name) => TokenKind::Identifier(name.clone()),
+                TokenKind::BracketOpen(bracket) => match bracket {
+                    BracketType::Parenthesis(depth) => TokenKind::BracketOpen(BracketType::Parenthesis(*depth)),
+                    BracketType::Brace(depth) => TokenKind::BracketOpen(BracketType::Brace(*depth)),
+                    BracketType::Bracket(depth) => TokenKind::BracketOpen(BracketType::Bracket(*depth)),
+                },
+                TokenKind::BracketClose(bracket) => match bracket {
+                    BracketType::Parenthesis(depth) => TokenKind::BracketClose(BracketType::Parenthesis(*depth)),
+                    BracketType::Brace(depth) => TokenKind::BracketClose(BracketType::Brace(*depth)),
+                    BracketType::Bracket(depth) => TokenKind::BracketClose(BracketType::Bracket(*depth)),
+                },
+                TokenKind::StringTemplate(part) => TokenKind::StringTemplate(StringTemplatePart { id: part.id, value: part.value.clone() }),
+                TokenKind::StringTemplateEnd(part) => TokenKind::StringTemplateEnd(StringTemplatePart { id: part.id, value: part.value.clone() }),
+            },
+            span: self.span,
+            position: self.position.clone(),
         }
     }
 }

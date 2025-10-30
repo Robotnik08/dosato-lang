@@ -60,6 +60,8 @@ pub enum KeyWord {
     Object,
     Function,
 
+    Error,
+
     Void
 }
 
@@ -123,6 +125,8 @@ pub static KEYWORD_MAP: phf::Map<&'static str, KeyWord> = phf_map! {
     "object" => KeyWord::Object,
     "function" => KeyWord::Function,
 
+    "error" => KeyWord::Error,
+
     "void" => KeyWord::Void,
 };
 
@@ -179,6 +183,7 @@ impl std::fmt::Debug for KeyWord {
             KeyWord::Array => write!(f, "Array"),
             KeyWord::Object => write!(f, "Object"),
             KeyWord::Function => write!(f, "Function"),
+            KeyWord::Error => write!(f, "Error"),
             KeyWord::Void => write!(f, "Void"),
         }
     }
@@ -238,7 +243,26 @@ impl KeyWord {
             | KeyWord::Array
             | KeyWord::Object
             | KeyWord::Function
+            | KeyWord::Error
             | KeyWord::Void
+        )
+    }
+
+    pub fn allow_extension_keywords(&self) -> bool {
+        matches!(self,
+            KeyWord::Do
+            | KeyWord::If
+            | KeyWord::IfNot
+            | KeyWord::Set
+            | KeyWord::Return
+            | KeyWord::For
+            | KeyWord::While
+            | KeyWord::Until
+            | KeyWord::Loop
+            | KeyWord::Break
+            | KeyWord::Continue
+            | KeyWord::Switch
+            | KeyWord::Match
         )
     }
 

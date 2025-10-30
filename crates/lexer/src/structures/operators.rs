@@ -68,6 +68,7 @@ pub enum Operator {
     AndAndAssign,
     OrOrAssign,
     XorXorAssign,
+    TypeCast,
 }
 
 pub static OPERATOR_CHARS: &str = "+-*/%=><!&^|~?:.,;#";
@@ -140,6 +141,7 @@ pub static OPERATOR_MAP: phf::Map<&'static str, Operator> = phf_map! {
     "^^=" => Operator::XorXorAssign,
     "|>=" => Operator::PipeAssign,
     "#" => Operator::Hash,
+    "as" => Operator::TypeCast,
 };
 
 impl Copy for Operator {}
@@ -219,9 +221,12 @@ impl std::fmt::Debug for Operator {
             Operator::OrOrAssign => write!(f, "OrOrAssign(||=)"),
             Operator::XorXorAssign => write!(f, "XorXorAssign(^^=)"),
             Operator::Hash => write!(f, "Hash(#)"),
+            Operator::TypeCast => write!(f, "TypeCast(as)"),
         }
     }
 }
+
+pub const UNARY_PREFIX_PRECEDENCE: u8 = 1;
 
 impl Operator {
     /// Return precedence: lower numbers bind more tightly (you mentioned lower => higher precedence).
@@ -231,21 +236,22 @@ impl Operator {
         match self {
             Arrow | Hash | Dot | NullCoalesceAccess => 0,
             Not | BitNot | Increment | Decrement | Absolute => 1,
-            Power | Root | Min | Max => 2,
-            Multiply | Divide | Modulo => 3,
-            Add | Subtract => 4,
-            ShiftLeft | ShiftRight => 5,
-            GreaterThen | LessThen | GreaterThanEqual | LessThanEqual | Spaceship => 6,
-            Equals | NotEquals | StrictEquals | TripleNotEquals => 7,
-            And => 8,
-            Xor => 9,
-            Or => 10,
-            AndAnd | XorXor => 11,
-            OrOr | NullCoalesce | Pipe => 12,
-            Question | Colon | Semicolon | RangeUp | RangeDown | RangeUpInclusive | RangeDownInclusive => 13,
-            Comma | FatArrow => 15,
+            TypeCast => 2,
+            Power | Root | Min | Max => 3,
+            Multiply | Divide | Modulo => 4,
+            Add | Subtract => 5,
+            ShiftLeft | ShiftRight => 6,
+            GreaterThen | LessThen | GreaterThanEqual | LessThanEqual | Spaceship => 7,
+            Equals | NotEquals | StrictEquals | TripleNotEquals => 8,
+            And => 9,
+            Xor => 10,
+            Or => 11,
+            AndAnd | XorXor => 12,
+            OrOr | NullCoalesce | Pipe => 13,
+            Question | Colon | Semicolon | RangeUp | RangeDown | RangeUpInclusive | RangeDownInclusive => 14,
+            Comma | FatArrow => 16,
 
-            _ => 14, // Assignment and others
+            _ => 15, // Assignment and others
         }
     }
 
@@ -273,11 +279,12 @@ impl Operator {
             | Operator::OrOrAssign
             | Operator::XorXorAssign
             | Operator::ArrayUnwrapAssign
+            | Operator::TypeCast
         )
     }
 
     /// Is this a unary operator?
-    pub fn is_unary(&self) -> bool {
+    pub fn is_unary_prefix(&self) -> bool {
         matches!(self,
             Operator::Not 
             | Operator::Increment 
@@ -288,6 +295,13 @@ impl Operator {
             | Operator::Root
             | Operator::Add
             | Operator::Multiply
+        )
+    }
+
+    pub fn is_unary_postfix(&self) -> bool {
+        matches!(self,
+            Operator::Increment
+            | Operator::Decrement
         )
     }
 
@@ -325,6 +339,7 @@ impl Operator {
             | Operator::RangeDown
             | Operator::RangeUpInclusive
             | Operator::RangeDownInclusive
+            | Operator::TypeCast
         )
     }
 

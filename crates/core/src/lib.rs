@@ -5,12 +5,19 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn eval_simple(source: &str) -> Result<(), error::Error> {
     let mut lexer = dosato_lexer::Lexer::new(source);
     let tokens = lexer.tokenise()?;
-
+    let parser = dosato_ast::Parser::new(tokens.clone(), Some("main".to_string()));
+    
     println!("Token amount: {}", tokens.len());
 
+    let mut index = 0;
     for token in tokens {
-        println!("{:?}", token);
+        println!("{}. {:?}", index, token);
+        index += 1;
     }
+
+    let ast = parser.parse()?;
+
+    println!("{:#?}", ast);
 
     Ok(())
 }
