@@ -527,6 +527,14 @@ impl Parser {
                                 error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after const keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
                             )
                         }
+                        KeyWord::Define | KeyWord::Implement => {
+                            let body = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
+                            match key_word_type {
+                                KeyWord::Define => Ok(Node::Define { body: vec![body] }),
+                                KeyWord::Implement => Ok(Node::Implement { body: vec![body] }),
+                                _ => unreachable!(),
+                            }
+                        }
                         _ => Ok(Node::Blank)
                     }
                 } else {
@@ -760,6 +768,46 @@ impl Parser {
                     values: value_expressions,
                 })
             }
+
+            // NodeType::FunctionDeclaration => {
+            //     // If first token is a type, we know the return type, else it's Any
+            //     let first_token = &self.tokens[span.0];
+            //     let mut start_of_function = span.0;
+            //     let return_type = if let TokenKind::KeyWord(kw) = &first_token.kind {
+            //         if kw.is_type_keyword() {
+            //             start_of_function += 1;
+            //             *kw
+            //         } else {
+            //             KeyWord::Any
+            //         }
+            //     } else {
+            //         KeyWord::Any
+            //     };
+
+            //     // Next token must be an identifier (function name)
+            //     let name_token = &self.tokens[start_of_function];
+            //     let name = if let TokenKind::Identifier(id) = &name_token.kind {
+            //         *id
+            //     } else {
+            //         return Err(
+            //             error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
+            //         )
+            //     };
+
+            //     // Next token must be opening parenthesis
+            //     let open_paren_token = &self.tokens[start_of_function + 1];
+            //     if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &open_paren_token.kind {
+            //         // find closing parenthesis
+            //         let mut index = start_of_function + 1;
+            //         skip_block!(self, index, span);
+                    
+
+            //     } else {
+            //         Err(
+            //             error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function + 1, start_of_function + 1), false)
+            //         )
+            //     }
+            // }
 
             _ => {
                 Err(

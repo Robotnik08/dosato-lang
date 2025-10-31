@@ -87,7 +87,13 @@ pub enum Node {
     },
     Const { // Outer const, encapsulates the body and any potential extensions
         body: Vec<Node>
-    }
+    },
+    Define {
+        body: Vec<Node>
+    },
+    Implement {
+        body: Vec<Node>
+    },
 }
 
 pub enum NodeType {
@@ -113,6 +119,9 @@ pub enum NodeType {
     Set,
     SetBody,
     Make,
+    Const,
+    Define,
+    Implement
 }
 
 impl std::fmt::Debug for Node {
@@ -144,6 +153,8 @@ impl std::fmt::Debug for Node {
             Node::SetBody { variable_expressions, operator, value_expressions } => f.debug_struct("SetBody").field("variable_expressions", variable_expressions).field("operator", operator).field("value_expressions", value_expressions).finish(),
             Node::Make { body } => f.debug_struct("Make").field("body", body).finish(),
             Node::Const { body } => f.debug_struct("Const").field("body", body).finish(),
+            Node::Define { body } => f.debug_struct("Define").field("body", body).finish(),
+            Node::Implement { body } => f.debug_struct("Implement").field("body", body).finish(),
         }
     }
 }
