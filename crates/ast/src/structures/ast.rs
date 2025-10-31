@@ -27,32 +27,28 @@ pub enum Node {
     },
 
     VariableDeclaration {
-        type_annotation: Option<dosato_lexer::KeyWord>,
+        type_annotation: dosato_lexer::KeyWord,
         constant: bool,
         uses_array_unwrapping: bool,
-        identifiers: Vec<u16>, // ids based on the identifier table
+        identifiers: Vec<Node>, // ids based on the identifier table
         values: Vec<Node>, // parallel to identifiers
     },
 
     FunctionDeclaration {
         name: u16, // id based on the identifier table
-        return_type: Option<dosato_lexer::KeyWord>,
+        return_type: dosato_lexer::KeyWord,
         parameters: Vec<Node>, // declaration nodes for parameters
         body: Box<Node>,
     },
 
     FunctionParameter {
         name: u16, // id based on the identifier table
-        type_annotation: Option<dosato_lexer::KeyWord>,
-        default_value: Option<Box<Node>>,
+        type_annotation: dosato_lexer::KeyWord,
+        default_value: Box<Node>,
     },
 
     ArrayExpression {
         elements: Vec<Node>,
-    },
-
-    CallingArguments {
-        arguments: Vec<Node>,
     },
 
     ObjectExpression {
@@ -75,6 +71,22 @@ pub enum Node {
     },
     DoBody { // Inner body of a do statement
         body: Box<Node>
+    },
+
+    Set { // Outer set, encapsulates the body and any potential extensions
+        body: Vec<Node>
+    },
+    SetBody { // Inner body of a set statement
+        variable_expressions: Vec<Node>,
+        operator: dosato_lexer::Operator,
+        value_expressions: Vec<Node>,
+    },
+
+    Make { // Outer make, encapsulates the body and any potential extensions
+        body: Vec<Node>
+    },
+    Const { // Outer const, encapsulates the body and any potential extensions
+        body: Vec<Node>
     }
 }
 
@@ -93,12 +105,14 @@ pub enum NodeType {
     FunctionDeclaration,
     FunctionParameter,
     ArrayExpression,
-    CallingArguments,
     ObjectExpression,
     ObjectProperty,
 
     Do,
-    DoBody
+    DoBody,
+    Set,
+    SetBody,
+    Make,
 }
 
 impl std::fmt::Debug for Node {
@@ -120,13 +134,16 @@ impl std::fmt::Debug for Node {
             Node::FunctionDeclaration { name, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("name", name).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
             Node::FunctionParameter { name, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("name", name).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
             Node::ArrayExpression { elements } => f.debug_struct("ArrayExpression").field("elements", elements).finish(),
-            Node::CallingArguments { arguments } => f.debug_struct("CallingArguments").field("arguments", arguments).finish(),
             Node::ObjectExpression { properties } => f.debug_struct("ObjectExpression").field("properties", properties).finish(),
             Node::ObjectProperty { key, value } => f.debug_struct("ObjectProperty").field("key", key).field("value", value).finish(),
             Node::TypeCastExpression { expression, target_type } => f.debug_struct("TypeCastExpression").field("expression", expression).field("target_type", target_type).finish(),
 
             Node::Do { body } => f.debug_struct("Do").field("body", body).finish(),
             Node::DoBody { body } => f.debug_struct("DoBody").field("expression", body).finish(),
+            Node::Set { body } => f.debug_struct("Set").field("body", body).finish(),
+            Node::SetBody { variable_expressions, operator, value_expressions } => f.debug_struct("SetBody").field("variable_expressions", variable_expressions).field("operator", operator).field("value_expressions", value_expressions).finish(),
+            Node::Make { body } => f.debug_struct("Make").field("body", body).finish(),
+            Node::Const { body } => f.debug_struct("Const").field("body", body).finish(),
         }
     }
 }

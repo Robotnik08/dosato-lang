@@ -283,6 +283,13 @@ impl Operator {
         )
     }
 
+    pub fn is_assigment_pure(&self) -> bool {
+        matches!(self,
+            Operator::Assign
+            | Operator::ArrayUnwrapAssign
+        )
+    }
+
     /// Is this a unary operator?
     pub fn is_unary_prefix(&self) -> bool {
         matches!(self,

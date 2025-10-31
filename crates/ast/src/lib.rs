@@ -317,15 +317,11 @@ impl Parser {
                 )
             }
 
-            NodeType::ArrayExpression | NodeType::CallingArguments => {
+            NodeType::ArrayExpression => {
                 let mut elements: Vec<Node> = Vec::new();
 
                 if span.0 == span.1 {
-                    match node_type {
-                        NodeType::ArrayExpression => return Ok(Node::ArrayExpression { elements }),
-                        NodeType::CallingArguments => return Ok(Node::CallingArguments { arguments: elements }),
-                        _ => unreachable!(),
-                    }
+                    return Ok(Node::ArrayExpression { elements });
                 }
 
                 let mut index = span.0;
@@ -348,11 +344,7 @@ impl Parser {
                     elements.push(element);
                 }
 
-                match node_type {
-                    NodeType::ArrayExpression => Ok(Node::ArrayExpression { elements }),
-                    NodeType::CallingArguments => Ok(Node::CallingArguments { arguments: elements }),
-                    _ => unreachable!(),
-                }
+                Ok(Node::ArrayExpression { elements })
             }
             
             NodeType::ObjectExpression => {
@@ -415,7 +407,36 @@ impl Parser {
                 })
             }
 
-            NodeType::Program => {
+            NodeType::CallExpression => {
+                let end_token = &self.tokens[span.1 - 1];
+                // must end with a closing parenthesis, everything inside until the first opening parenthesis are the arguments
+                // the rest up front is the callee AKA expression
+                if let TokenKind::BracketClose(BracketType::Parenthesis(_)) = &end_token.kind {
+                    let mut index = span.1 - 1;
+                    skip_block_backwards!(self, index, span);
+                    if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &self.tokens[index].kind {
+                        let arguments = self.parse_node(NodeType::ArrayExpression, (index + 1, span.1 - 1))?;
+                        let arguments = if let Node::ArrayExpression { elements } = arguments { elements } else { unreachable!() };
+
+                        let callee = self.parse_node(NodeType::Expression, (span.0, index))?;
+                        Ok(Node::CallExpression {
+                            callee: Box::new(callee),
+                            arguments: arguments,
+                        })
+                    } else {
+                        Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index, index), false)
+                        )
+                    }
+                } else {
+                    Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected closing parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.1 - 1, span.1 - 1), false)
+                    )
+                }
+            }
+
+
+            NodeType::Program | NodeType::Block => {
                 let mut statements: Vec<Node> = Vec::new();
 
                 let mut index = span.0;
@@ -445,7 +466,11 @@ impl Parser {
                     statements.push(statement);
                 }
 
-                Ok(Node::Program(statements))
+                match node_type {
+                    NodeType::Program => Ok(Node::Program(statements)),
+                    NodeType::Block => Ok(Node::Block(statements)),
+                    _ => unreachable!(),
+                }
             }
             
             NodeType::Statement => {
@@ -462,9 +487,45 @@ impl Parser {
 
                 if key_word_type.is_master_keyword() {
                     match key_word_type {
-                        dosato_lexer::KeyWord::Do => {
+                        KeyWord::Do => {
                             let body = self.parse_node(NodeType::DoBody, (span.0 + 1, span.1))?;
                             Ok(Node::Do { body: vec![body] })
+                        }
+                        KeyWord::Set => {
+                            let body = self.parse_node(NodeType::SetBody, (span.0 + 1, span.1))?;
+                            Ok(Node::Set { body: vec![body] })
+                        }
+                        KeyWord::Make => {
+                            let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
+                            if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
+                                return Ok(Node::Make { body: vec![Node::VariableDeclaration {
+                                        type_annotation,
+                                        constant: false,
+                                        uses_array_unwrapping,
+                                        identifiers,
+                                        values,
+                                    }]
+                                })
+                            }
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after make keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                            )
+                        }
+                        KeyWord::Const => {
+                            let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
+                            if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
+                                return Ok(Node::Const { body: vec![Node::VariableDeclaration {
+                                        type_annotation,
+                                        constant: true,
+                                        uses_array_unwrapping,
+                                        identifiers,
+                                        values,
+                                    }]
+                                })
+                            }
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after const keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                            )
                         }
                         _ => Ok(Node::Blank)
                     }
@@ -475,7 +536,12 @@ impl Parser {
                 }
             }
 
+
             NodeType::DoBody => {
+                if self.encased_in_curly_braces(span) {
+                    return self.parse_node(NodeType::Block, (span.0 + 1, span.1 - 1));
+                }
+
                 let body = self.parse_node(NodeType::Expression, span)?;
                 if let Node::CallExpression { .. } = body {
                     Ok(Node::DoBody { body: Box::new(body) })
@@ -484,30 +550,215 @@ impl Parser {
                 }
             }
 
-            NodeType::CallExpression => {
-                let end_token = &self.tokens[span.1 - 1];
-                // must end with a closing parenthesis, everything inside until the first opening parenthesis are the arguments
-                // the rest up front is the callee AKA expression
-                if let TokenKind::BracketClose(BracketType::Parenthesis(_)) = &end_token.kind {
-                    let mut index = span.1 - 1;
-                    skip_block_backwards!(self, index, span);
-                    if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &self.tokens[index].kind {
-                        let arguments = self.parse_node(NodeType::CallingArguments, (index + 1, span.1 - 1))?;
-                        let callee = self.parse_node(NodeType::Expression, (span.0, index))?;
-                        Ok(Node::CallExpression {
-                            callee: Box::new(callee),
-                            arguments: vec![arguments],
-                        })
-                    } else {
-                        Err(
-                            error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index, index), false)
-                        )
+            NodeType::SetBody => {
+                // Split by the first assignment operator found
+                let mut index = span.0;
+                let mut found_operator = false;
+                let mut operator_index = span.0;
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if op.is_assignment() {
+                            found_operator = true;
+                            operator_index = index;
+                            break;
+                        }
                     }
-                } else {
-                    Err(
-                        error::Error::new(error::ErrorKind::SyntaxError, "Expected closing parenthesis for call expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.1 - 1, span.1 - 1), false)
+                    index += 1;
+                }
+
+                // Increment Decrement
+                if operator_index == span.0 {
+                    return match found_operator {
+                        true => Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected variable expression before assignment operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, operator_index), false)
+                        ),
+                        false => {
+                            if let TokenKind::Operator(op) = &self.tokens[span.1 - 1].kind {
+                                match op {
+                                    Operator::Decrement | Operator::Increment => {
+                                        // expression on the comma
+                                        let mut expressions: Vec<Node> = vec![];
+
+                                        let mut expression_start = span.0;
+                                        let mut index = span.0;
+                                        while index < span.1 - 1 {
+                                            let token = &self.tokens[index];
+                                            skip_block!(self, index, span);
+                                            if let TokenKind::Operator(op) = &token.kind {
+                                                if let Operator::Comma = op {
+                                                    let expr = self.parse_node(NodeType::Expression, (expression_start, index))?;
+                                                    expressions.push(expr);
+                                                    expression_start = index + 1;
+                                                }
+                                            }
+                                            index += 1;
+                                        }
+
+                                        let expr = self.parse_node(NodeType::Expression, (expression_start, index))?;
+                                        expressions.push(expr);
+
+
+                                        Ok(Node::SetBody {
+                                            variable_expressions: expressions,
+                                            operator: *op,
+                                            value_expressions: vec![],
+                                        })
+                                    }
+                                    _ => {
+                                        Err(
+                                            error::Error::new(error::ErrorKind::SyntaxError, "Expected assignment operator in set statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected assignment operator in set statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false)
+                                )
+                            }
+                        },
+                    }
+                }
+
+                // pre operator expressions
+                let mut index = span.0;
+                let mut variable_expressions: Vec<Node> = vec![];
+                let mut expression_start = span.0;
+                while index < operator_index {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Comma = op {
+                            let expr = self.parse_node(NodeType::Expression, (expression_start, index))?;
+                            variable_expressions.push(expr);
+                            expression_start = index + 1;
+                        }
+                    }
+                    index += 1;
+                }
+
+                let expr = self.parse_node(NodeType::Expression, (expression_start, operator_index))?;
+                variable_expressions.push(expr);
+
+                // post operator expressions
+                let mut value_expressions: Vec<Node> = vec![];
+                index = operator_index + 1;
+                expression_start = operator_index + 1;
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Comma = op {
+                            let expr = self.parse_node(NodeType::Expression, (expression_start, index))?;
+                            value_expressions.push(expr);
+                            expression_start = index + 1;
+                        }
+                    }
+                    index += 1;
+                }
+
+                let expr = self.parse_node(NodeType::Expression, (expression_start, span.1))?;
+                value_expressions.push(expr);
+
+                Ok(Node::SetBody {
+                    variable_expressions,
+                    operator: match &self.tokens[operator_index].kind {
+                        TokenKind::Operator(op) => *op,
+                        _ => unreachable!()
+                    },
+                    value_expressions,
+                })
+            }
+
+            NodeType::VariableDeclaration => {
+                // split on the first assignment operator
+                let mut index = span.0;
+                let mut found_operator = false;
+                let mut operator_index = span.0;
+                let mut uses_array_unwrapping = false;
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if op.is_assigment_pure() {
+                            found_operator = true;
+                            operator_index = index;
+                            uses_array_unwrapping = matches!(op, Operator::ArrayUnwrapAssign);
+                            break;
+                        }
+                    }
+                    index += 1;
+                }
+
+                if !found_operator {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected assignment operator in variable declaration".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false)
+                    )
+                } else if operator_index == span.0 {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration before assignment operator".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, operator_index), false)
                     )
                 }
+
+                let first_token = &self.tokens[span.0];
+
+                let mut start_of_variables = span.0;
+                let type_annotation = if let TokenKind::KeyWord(kw) = &first_token.kind {
+                    if kw.is_type_keyword() {
+                        start_of_variables += 1;
+                        *kw
+                    } else {
+                        KeyWord::Any
+                    }
+                } else {
+                    KeyWord::Any
+                };
+
+                let mut variable_declarations: Vec<Node> = vec![];
+                index = start_of_variables;
+                let mut current_variable_start = index;
+                while index < operator_index {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Comma = op {
+                            let var_decl = self.parse_node(NodeType::Expression, (current_variable_start, index))?;
+                            variable_declarations.push(var_decl);
+                            current_variable_start = index + 1;
+                        }
+                    }
+                    index += 1;
+                }
+                let var_decl = self.parse_node(NodeType::Expression, (current_variable_start, operator_index))?;
+                variable_declarations.push(var_decl);
+                
+                let mut value_expressions: Vec<Node> = vec![];
+                index = operator_index + 1;
+                let mut current_value_start = index;
+
+                while index < span.1 {
+                    let token = &self.tokens[index];
+                    skip_block!(self, index, span);
+                    if let TokenKind::Operator(op) = &token.kind {
+                        if let Operator::Comma = op {
+                            let value_expr = self.parse_node(NodeType::Expression, (current_value_start, index))?;
+                            value_expressions.push(value_expr);
+                            current_value_start = index + 1;
+                        }
+                    }
+                    index += 1;
+                }
+                let value_expr = self.parse_node(NodeType::Expression, (current_value_start, span.1))?;
+                value_expressions.push(value_expr);
+
+                Ok(Node::VariableDeclaration { 
+                    type_annotation,
+                    constant: false,
+                    uses_array_unwrapping,
+                    identifiers: variable_declarations,
+                    values: value_expressions,
+                })
             }
 
             _ => {
