@@ -142,6 +142,34 @@ impl Parser {
 
         false
     }
+
+    pub fn split_on_commas(&self, span: (usize, usize)) -> Result<Vec<(usize, usize)>, error::Error> {
+        if span.1 - span.0 == 0 {
+            return Ok(vec![]);
+        }
+
+        let mut segments: Vec<(usize, usize)> = Vec::new();
+
+        let mut index = span.0;
+        let mut current_start = span.0;
+        while index < span.1 {
+            let token = &self.tokens[index];
+            skip_block!(self, index, span);
+            if let TokenKind::Operator(op) = &token.kind {
+                if let Operator::Comma = op {
+                    segments.push((current_start, index));
+                    current_start = index + 1;
+                }
+            }
+            index += 1;
+        }
+
+        if index > current_start {
+            segments.push((current_start, index));
+        }
+
+        Ok(segments)
+    }
     
     pub fn parse_node(&self, node_type: NodeType, span: (usize, usize)) -> Result<Node, error::Error> {
         match node_type {
@@ -374,7 +402,7 @@ impl Parser {
                     properties.push(property);
                 }
 
-                Ok(Node::ObjectExpression { properties })
+                Ok(Node::ObjectExpression{ properties })
             }
 
             NodeType::ObjectProperty => {
@@ -769,45 +797,68 @@ impl Parser {
                 })
             }
 
-            // NodeType::FunctionDeclaration => {
-            //     // If first token is a type, we know the return type, else it's Any
-            //     let first_token = &self.tokens[span.0];
-            //     let mut start_of_function = span.0;
-            //     let return_type = if let TokenKind::KeyWord(kw) = &first_token.kind {
-            //         if kw.is_type_keyword() {
-            //             start_of_function += 1;
-            //             *kw
-            //         } else {
-            //             KeyWord::Any
-            //         }
-            //     } else {
-            //         KeyWord::Any
-            //     };
+            NodeType::FunctionDeclaration => {
+                // If first token is a type, we know the return type, else it's Any
+                let first_token = &self.tokens[span.0];
+                let mut start_of_function = span.0;
+                let return_type = if let TokenKind::KeyWord(kw) = &first_token.kind {
+                    if kw.is_type_keyword() {
+                        start_of_function += 1;
+                        *kw
+                    } else {
+                        KeyWord::Any
+                    }
+                } else {
+                    KeyWord::Any
+                };
 
-            //     // Next token must be an identifier (function name)
-            //     let name_token = &self.tokens[start_of_function];
-            //     let name = if let TokenKind::Identifier(id) = &name_token.kind {
-            //         *id
-            //     } else {
-            //         return Err(
-            //             error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
-            //         )
-            //     };
 
-            //     // Next token must be opening parenthesis
-            //     let open_paren_token = &self.tokens[start_of_function + 1];
-            //     if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &open_paren_token.kind {
-            //         // find closing parenthesis
-            //         let mut index = start_of_function + 1;
-            //         skip_block!(self, index, span);
-                    
+                // Next token must be an identifier (function name)
+                let name_token = &self.tokens[start_of_function];
+                let name = if let TokenKind::Identifier(id) = &name_token.kind {
+                    id
+                } else {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
+                    )
+                };
 
-            //     } else {
-            //         Err(
-            //             error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function + 1, start_of_function + 1), false)
-            //         )
-            //     }
-            // }
+                // Next token must be opening parenthesis
+                let open_paren_token = &self.tokens[start_of_function + 1];
+                if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &open_paren_token.kind {
+                    // find closing parenthesis
+                    let mut index = start_of_function + 1;
+                    skip_block!(self, index, span);
+
+                    if let TokenKind::BracketClose(BracketType::Parenthesis(_)) = &self.tokens[index].kind {
+                        // parse parameters
+                        let parameters = self.split_on_commas((start_of_function + 2, index))?;
+                        let mut parameter_nodes: Vec<Node> = vec![];
+                        for parameter_span in &parameters {
+                            let param_node = self.parse_node(NodeType::FunctionParameter, *parameter_span)?;
+                            parameter_nodes.push(param_node);
+                        }
+
+                        // the rest is the function body
+                        let body = self.parse_node(NodeType::Block, (index + 2, span.1 - 1))?;
+
+                        Ok(Node::FunctionDeclaration {
+                            name: 0,
+                            parameters: parameter_nodes,
+                            return_type,
+                            body: Box::new(body),
+                        })
+                    } else {
+                        Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected closing parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index, index), false)
+                        )
+                    }
+                } else {
+                    Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function + 1, start_of_function + 1), false)
+                    )
+                }
+            }
 
             _ => {
                 Err(
