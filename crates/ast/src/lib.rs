@@ -164,9 +164,7 @@ impl Parser {
             index += 1;
         }
 
-        if index > current_start {
-            segments.push((current_start, index));
-        }
+        segments.push((current_start, index));
 
         Ok(segments)
     }
@@ -815,7 +813,7 @@ impl Parser {
 
                 // Next token must be an identifier (function name)
                 let name_token = &self.tokens[start_of_function];
-                let name = if let TokenKind::Identifier(id) = &name_token.kind {
+                let _name = if let TokenKind::Identifier(id) = &name_token.kind {
                     id
                 } else {
                     return Err(
@@ -858,6 +856,59 @@ impl Parser {
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function + 1, start_of_function + 1), false)
                     )
                 }
+            }
+
+            NodeType::FunctionParameter => {
+                // if first keyword is a type, it's the type annotation, otherwise Any, then identifier, then optional default value after equals
+                let first_token = &self.tokens[span.0];
+                let mut current_index = span.0;
+                let type_annotation = if let TokenKind::KeyWord(kw) = &first_token.kind {
+                    if kw.is_type_keyword() {
+                        current_index += 1;
+                        *kw
+                    } else {
+                        KeyWord::Any
+                    }
+                } else {
+                    KeyWord::Any
+                };
+
+                let name_token = &self.tokens[current_index];
+                let _name = if let TokenKind::Identifier(id) = &name_token.kind {
+                    current_index += 1;
+                    id
+                } else {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected parameter name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(current_index, current_index), false)
+                    )
+                };
+
+                let default_value = if current_index < span.1 {
+                    let equals_token = &self.tokens[current_index];
+                    if let TokenKind::Operator(op) = &equals_token.kind {
+                        if let Operator::Assign = op {
+                            current_index += 1;
+                            let default_value_node = self.parse_node(NodeType::Expression, (current_index, span.1))?;
+                            Box::new(default_value_node)
+                        } else {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected assignment operator for default parameter value".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(current_index, current_index), false)
+                            )
+                        }
+                    } else {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected assignment operator for default parameter value".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(current_index, current_index), false)
+                        )
+                    }
+                } else {
+                    Box::new(Node::Blank)
+                };
+
+                Ok(Node::FunctionParameter {
+                    name: 0,
+                    type_annotation,
+                    default_value,
+                })
             }
 
             _ => {
