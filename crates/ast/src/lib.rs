@@ -218,11 +218,42 @@ impl Parser {
                 let mut operator_index = span.0;
                 let mut operator_precedence = 0; // lowest precedence
                 let mut last_operator_was_unary_postfix = false;
+                let mut found_lambda = false;
+                let mut arrow_index = span.0;
                 while index < span.1 {
                     let token = &self.tokens[index];
                     skip_block!(self, index, span);
 
                     if let TokenKind::Operator(op) = &token.kind {
+                        if index + 1 < span.1 && matches!(op, Operator::FatArrow) {
+                            arrow_index = index;
+                            index += 1;
+                            found_lambda = true;
+                            // check next token, if open curly brace, skip till end of block, if not, break, the rest of the expression is the body
+                            if let Some(next_token) = self.tokens.get(index) {
+                                if let TokenKind::BracketOpen(BracketType::Brace(start_depth)) = &next_token.kind {
+                                    // skip till end of block
+                                    while let Some(token) = self.tokens.get(index) {
+                                        if let TokenKind::BracketClose(BracketType::Brace(end_depth)) = &token.kind {
+                                            if start_depth == end_depth {
+                                                index += 1;
+                                                break;
+                                            }    
+                                        }
+                                        index += 1;
+                                        continue;
+                                    }
+                                } else {
+                                    // not a block, break
+                                    break;
+                                }
+                            }
+
+                            continue;
+                        }
+                        
+
+
                         let precedence = op.precedence();
                         if precedence >= operator_precedence {
                             if found_operator && op.is_unary_prefix() && !last_operator_was_unary_postfix && operator_index == index - 1 {
@@ -336,6 +367,49 @@ impl Parser {
                             right: Box::new(right),
                         });
                     }
+                } else if found_lambda {
+                    // if first token is type annotation, use that and the rest is parameters
+                    let mut first_index = span.0;
+                    let first_token = &self.tokens[first_index];
+                    let return_type = match &first_token.kind {
+                        TokenKind::KeyWord(kw) => if kw.is_type_keyword() { 
+                                first_index += 1;
+                                *kw
+                            } else { 
+                                KeyWord::Any
+                            },
+                        _ => {
+                            KeyWord::Any
+                        }
+                    };
+
+                    let parameters = if self.encased_in_parentheses((first_index, arrow_index)) {
+                        // split on comma
+                        let segments = self.split_on_commas((first_index + 1, arrow_index - 1))?;
+                        let mut params: Vec<Node> = Vec::new();
+                        for segment in segments {
+                            let param = self.parse_node(NodeType::FunctionParameter, segment)?;
+                            params.push(param);
+                        }
+                        params
+                    } else if first_index == arrow_index - 1 {
+                        vec![self.parse_node(NodeType::FunctionParameter, (first_index, arrow_index - 1))?]
+                    } else {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Invalid lambda parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(first_index, arrow_index - 1), false)
+                        );
+                    };
+
+                    let body = if self.encased_in_curly_braces((arrow_index + 1, span.1)) {
+                        self.parse_node(NodeType::Block, (arrow_index + 2, span.1 - 1))?
+                    } else {
+                        self.parse_node(NodeType::Expression, (arrow_index + 1, span.1))?
+                    };
+                    return Ok(Node::LambdaExpression {
+                        return_type,
+                        parameters,
+                        body: Box::new(body),
+                    });
                 }
 
                 Err(
@@ -841,7 +915,7 @@ impl Parser {
                         let body = self.parse_node(NodeType::Block, (index + 2, span.1 - 1))?;
 
                         Ok(Node::FunctionDeclaration {
-                            name: 0,
+                            id: 0,
                             parameters: parameter_nodes,
                             return_type,
                             body: Box::new(body),
@@ -905,7 +979,7 @@ impl Parser {
                 };
 
                 Ok(Node::FunctionParameter {
-                    name: 0,
+                    id: 0,
                     type_annotation,
                     default_value,
                 })

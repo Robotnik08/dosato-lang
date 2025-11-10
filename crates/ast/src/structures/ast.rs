@@ -35,14 +35,14 @@ pub enum Node {
     },
 
     FunctionDeclaration {
-        name: u16, // id based on the identifier table
+        id: u16, // id based on the identifier table
         return_type: dosato_lexer::KeyWord,
         parameters: Vec<Node>, // declaration nodes for parameters
         body: Box<Node>,
     },
 
     FunctionParameter {
-        name: u16, // id based on the identifier table
+        id: u16, // id based on the identifier table
         type_annotation: dosato_lexer::KeyWord,
         default_value: Box<Node>,
     },
@@ -58,6 +58,12 @@ pub enum Node {
     ObjectProperty {
         key: Box<Node>,
         value: Box<Node>,
+    },
+
+    LambdaExpression {
+        return_type: dosato_lexer::KeyWord,
+        parameters: Vec<Node>, // declaration nodes for parameters
+        body: Box<Node>,
     },
 
     TypeCastExpression {
@@ -113,6 +119,7 @@ pub enum NodeType {
     ArrayExpression,
     ObjectExpression,
     ObjectProperty,
+    LambdaExpression,
 
     Do,
     DoBody,
@@ -140,12 +147,14 @@ impl std::fmt::Debug for Node {
             Node::Identifier(id) => f.debug_struct("Identifier").field("id", id).finish(),
             Node::CallExpression { callee, arguments } => f.debug_struct("CallExpression").field("callee", callee).field("arguments", arguments).finish(),
             Node::VariableDeclaration { type_annotation, constant, uses_array_unwrapping, identifiers, values } => f.debug_struct("VariableDeclaration").field("type_annotation", type_annotation).field("constant", constant).field("uses_array_unwrapping", uses_array_unwrapping).field("identifiers", identifiers).field("values", values).finish(),
-            Node::FunctionDeclaration { name, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("name", name).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
-            Node::FunctionParameter { name, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("name", name).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
+            Node::FunctionDeclaration { id, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("id", id).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
+            Node::FunctionParameter { id, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("id", id).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
             Node::ArrayExpression { elements } => f.debug_struct("ArrayExpression").field("elements", elements).finish(),
             Node::ObjectExpression { properties } => f.debug_struct("ObjectExpression").field("properties", properties).finish(),
             Node::ObjectProperty { key, value } => f.debug_struct("ObjectProperty").field("key", key).field("value", value).finish(),
+            Node::LambdaExpression { return_type, parameters, body } => f.debug_struct("LambdaExpression").field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
             Node::TypeCastExpression { expression, target_type } => f.debug_struct("TypeCastExpression").field("expression", expression).field("target_type", target_type).finish(),
+
 
             Node::Do { body } => f.debug_struct("Do").field("body", body).finish(),
             Node::DoBody { body } => f.debug_struct("DoBody").field("expression", body).finish(),
