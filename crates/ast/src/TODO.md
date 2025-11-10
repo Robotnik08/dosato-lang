@@ -11,7 +11,7 @@
     - [X] Prefix
     - [X] Postfix
 - [X] Type Casting Expressions
-- [ ] Lambda Expressions
+- [X] Lambda Expressions
 - [ ] Conditional Expressions (ternary)
 
 ## Statements
@@ -20,7 +20,7 @@
 - [X] Set Statement
 - [X] Make Statement
 - [X] Const Statement
-- [ ] Define/Implement Function Statement
+- [X] Define Function Statement
 - [ ] Class Statement
 - [ ] Enum Statement 
 - [ ] Inherits Statement
