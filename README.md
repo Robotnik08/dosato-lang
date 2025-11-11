@@ -22,10 +22,10 @@ Rust, with its strong type system and memory safety guarantees, seemed like a be
 ![](https://geps.dev/progress/15)
 
 ### Lexer progress:
-![](https://geps.dev/progress/95)
+![](https://geps.dev/progress/100)
 
 ### Parser progress:
-![](https://geps.dev/progress/40)
+![](https://geps.dev/progress/90)
 
 ### Compiler progress:
 ![](https://geps.dev/progress/0)
