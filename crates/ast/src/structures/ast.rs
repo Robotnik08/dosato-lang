@@ -77,35 +77,18 @@ pub enum Node {
         target_type: dosato_lexer::KeyWord,
     },
 
-    // Master bodies
-    Do { // Outer do, encapsulates the body and any potential extensions
-        body: Vec<Node>
-    },
-    DoBody { // Inner body of a do statement
-        body: Box<Node>
-    },
-
-    Set { // Outer set, encapsulates the body and any potential extensions
-        body: Vec<Node>
-    },
-    SetBody { // Inner body of a set statement
+    Set { // Inner body of a set statement
         variable_expressions: Vec<Node>,
         operator: dosato_lexer::Operator,
         value_expressions: Vec<Node>,
     },
 
-    Make { // Outer make, encapsulates the body and any potential extensions
-        body: Vec<Node>
+    Return {
+        argument: Option<Box<Node>>,
     },
-    Const { // Outer const, encapsulates the body and any potential extensions
-        body: Vec<Node>
-    },
-    Define {
-        body: Vec<Node>
-    },
-    Implement {
-        body: Vec<Node>
-    },
+
+    Break,
+    Continue,
 }
 
 pub enum NodeType {
@@ -130,13 +113,8 @@ pub enum NodeType {
     LambdaExpression,
 
     Do,
-    DoBody,
     Set,
-    SetBody,
-    Make,
-    Const,
-    Define,
-    Implement
+    Return,
 }
 
 impl std::fmt::Debug for Node {
@@ -165,15 +143,11 @@ impl std::fmt::Debug for Node {
             Node::LambdaExpression { return_type, parameters, body } => f.debug_struct("LambdaExpression").field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
             Node::TypeCastExpression { expression, target_type } => f.debug_struct("TypeCastExpression").field("expression", expression).field("target_type", target_type).finish(),
 
-
-            Node::Do { body } => f.debug_struct("Do").field("body", body).finish(),
-            Node::DoBody { body } => f.debug_struct("DoBody").field("expression", body).finish(),
-            Node::Set { body } => f.debug_struct("Set").field("body", body).finish(),
-            Node::SetBody { variable_expressions, operator, value_expressions } => f.debug_struct("SetBody").field("variable_expressions", variable_expressions).field("operator", operator).field("value_expressions", value_expressions).finish(),
-            Node::Make { body } => f.debug_struct("Make").field("body", body).finish(),
-            Node::Const { body } => f.debug_struct("Const").field("body", body).finish(),
-            Node::Define { body } => f.debug_struct("Define").field("body", body).finish(),
-            Node::Implement { body } => f.debug_struct("Implement").field("body", body).finish(),
+            Node::Set { variable_expressions, operator, value_expressions } => f.debug_struct("Set").field("variable_expressions", variable_expressions).field("operator", operator).field("value_expressions", value_expressions).finish(),
+            Node::Return { argument } => f.debug_struct("Return").field("argument", argument).finish(),
+        
+            Node::Break => write!(f, "Break"),
+            Node::Continue => write!(f, "Continue"),
         }
     }
 }

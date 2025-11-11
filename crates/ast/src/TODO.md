@@ -12,7 +12,7 @@
     - [X] Postfix
 - [X] Type Casting Expressions
 - [X] Lambda Expressions
-- [ ] Conditional Expressions (ternary)
+- [X] Conditional Expressions (ternary)
 
 ## Statements
 
@@ -21,13 +21,13 @@
 - [X] Make Statement
 - [X] Const Statement
 - [X] Define Function Statement
-- [ ] Class Statement
-- [ ] Enum Statement 
-- [ ] Inherits Statement
 - [ ] Return Statement
 - [ ] Break Statement
 - [ ] Continue Statement
-- [ ] If/Ifnot Statement
+- [ ] Class Statement
+- [ ] Enum Statement 
+- [ ] Inherits Statement
+- [ ] If/Unless Statement
 - [ ] While/Until Statement
 - [ ] Loop Statement
 - [ ] For Statement
@@ -36,9 +36,3 @@
 
 ## Extensions
 - [ ] Support for postfix extensions
-
-- [ ] When/Unless extension
-- [ ] Else/ElseIf/ElseIfNot extension
-- [ ] During/Til extension
-- [ ] With extension
-- [ ] Then extension

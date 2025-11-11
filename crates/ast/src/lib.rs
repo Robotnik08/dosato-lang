@@ -635,23 +635,22 @@ impl Parser {
                 if key_word_type.is_master_keyword() {
                     match key_word_type {
                         KeyWord::Do => {
-                            let body = self.parse_node(NodeType::DoBody, (span.0 + 1, span.1))?;
-                            Ok(Node::Do { body: vec![body] })
+                            let node = self.parse_node(NodeType::Do, (span.0 + 1, span.1))?;
+                            Ok(node)
                         }
                         KeyWord::Set => {
-                            let body = self.parse_node(NodeType::SetBody, (span.0 + 1, span.1))?;
-                            Ok(Node::Set { body: vec![body] })
+                            let node = self.parse_node(NodeType::Set, (span.0 + 1, span.1))?;
+                            Ok(node)
                         }
                         KeyWord::Make => {
                             let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
                             if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
-                                return Ok(Node::Make { body: vec![Node::VariableDeclaration {
-                                        type_annotation,
-                                        constant: false,
-                                        uses_array_unwrapping,
-                                        identifiers,
-                                        values,
-                                    }]
+                                return Ok(Node::VariableDeclaration {
+                                    type_annotation,
+                                    constant: false,
+                                    uses_array_unwrapping,
+                                    identifiers,
+                                    values,
                                 })
                             }
                             Err(
@@ -661,13 +660,12 @@ impl Parser {
                         KeyWord::Const => {
                             let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
                             if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
-                                return Ok(Node::Const { body: vec![Node::VariableDeclaration {
-                                        type_annotation,
-                                        constant: true,
-                                        uses_array_unwrapping,
-                                        identifiers,
-                                        values,
-                                    }]
+                                return Ok(Node::VariableDeclaration {
+                                    type_annotation,
+                                    constant: true,
+                                    uses_array_unwrapping,
+                                    identifiers,
+                                    values,
                                 })
                             }
                             Err(
@@ -675,13 +673,35 @@ impl Parser {
                             )
                         }
                         KeyWord::Define | KeyWord::Implement => {
-                            let body = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
-                            match key_word_type {
-                                KeyWord::Define => Ok(Node::Define { body: vec![body] }),
-                                KeyWord::Implement => Ok(Node::Implement { body: vec![body] }),
-                                _ => unreachable!(),
-                            }
+                            let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
+                            Ok(node)
                         }
+                        KeyWord::Return => {
+                            let expression = if span.1 - span.0 > 1 {
+                                Some(self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?)
+                            } else {
+                                None
+                            };
+                            Ok(Node::Return {
+                                argument: expression.map(Box::new),
+                            })
+                        }
+                        KeyWord::Break => {
+                            if span.1 - span.0 > 1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Break statement does not take any arguments".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                                )
+                            }
+                            Ok(Node::Break)
+                        },
+                        KeyWord::Continue => {
+                            if span.1 - span.0 > 1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Continue statement does not take any arguments".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                                )
+                            }
+                            Ok(Node::Continue)
+                        },
                         _ => Ok(Node::Blank)
                     }
                 } else {
@@ -692,20 +712,20 @@ impl Parser {
             }
 
 
-            NodeType::DoBody => {
+            NodeType::Do => {
                 if self.encased_in_curly_braces(span) {
                     return self.parse_node(NodeType::Block, (span.0 + 1, span.1 - 1));
                 }
 
-                let body = self.parse_node(NodeType::Expression, span)?;
-                if let Node::CallExpression { .. } = body {
-                    Ok(Node::DoBody { body: Box::new(body) })
+                let expression = self.parse_node(NodeType::Expression, span)?;
+                if let Node::CallExpression { .. } = expression {
+                    Ok(expression)
                 } else {
                     Err(error::Error::new(error::ErrorKind::SyntaxError, "Expected function call or block".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false))
                 }
             }
 
-            NodeType::SetBody => {
+            NodeType::Set => {
                 // Split by the first assignment operator found
                 let mut index = span.0;
                 let mut found_operator = false;
@@ -755,7 +775,7 @@ impl Parser {
                                         expressions.push(expr);
 
 
-                                        Ok(Node::SetBody {
+                                        Ok(Node::Set {
                                             variable_expressions: expressions,
                                             operator: *op,
                                             value_expressions: vec![],
@@ -816,7 +836,7 @@ impl Parser {
                 let expr = self.parse_node(NodeType::Expression, (expression_start, span.1))?;
                 value_expressions.push(expr);
 
-                Ok(Node::SetBody {
+                Ok(Node::Set {
                     variable_expressions,
                     operator: match &self.tokens[operator_index].kind {
                         TokenKind::Operator(op) => *op,
