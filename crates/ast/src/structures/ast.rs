@@ -26,6 +26,12 @@ pub enum Node {
         arguments: Vec<Node>,
     },
 
+    TernaryExpression {
+        condition: Box<Node>,
+        true_expression: Box<Node>,
+        false_expression: Box<Node>,
+    },
+
     VariableDeclaration {
         type_annotation: dosato_lexer::KeyWord,
         constant: bool,
@@ -113,6 +119,8 @@ pub enum NodeType {
     Literal,
     Identifier,
     CallExpression,
+    TernaryExpression,
+
     VariableDeclaration,
     FunctionDeclaration,
     FunctionParameter,
@@ -146,6 +154,8 @@ impl std::fmt::Debug for Node {
             Node::Literal(token) => f.debug_struct("Literal").field("token", token).finish(),
             Node::Identifier(id) => f.debug_struct("Identifier").field("id", id).finish(),
             Node::CallExpression { callee, arguments } => f.debug_struct("CallExpression").field("callee", callee).field("arguments", arguments).finish(),
+            Node::TernaryExpression { condition, true_expression, false_expression } => f.debug_struct("TernaryExpression").field("condition", condition).field("true_expression", true_expression).field("false_expression", false_expression).finish(),
+
             Node::VariableDeclaration { type_annotation, constant, uses_array_unwrapping, identifiers, values } => f.debug_struct("VariableDeclaration").field("type_annotation", type_annotation).field("constant", constant).field("uses_array_unwrapping", uses_array_unwrapping).field("identifiers", identifiers).field("values", values).finish(),
             Node::FunctionDeclaration { id, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("id", id).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
             Node::FunctionParameter { id, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("id", id).field("type_annotation", type_annotation).field("default_value", default_value).finish(),

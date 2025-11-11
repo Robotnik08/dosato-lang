@@ -248,7 +248,8 @@ impl Operator {
             Or => 11,
             AndAnd | XorXor => 12,
             OrOr | NullCoalesce | Pipe => 13,
-            Question | Colon | Semicolon | RangeUp | RangeDown | RangeUpInclusive | RangeDownInclusive => 14,
+            Semicolon | RangeUp | RangeDown | RangeUpInclusive | RangeDownInclusive => 14,
+            Question | Colon => 15,
             Comma | FatArrow => 16,
 
             _ => 15, // Assignment and others

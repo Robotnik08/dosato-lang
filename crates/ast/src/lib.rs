@@ -220,6 +220,7 @@ impl Parser {
                 let mut last_operator_was_unary_postfix = false;
                 let mut found_lambda = false;
                 let mut arrow_index = span.0;
+                let mut second_operator_index_for_ternary = span.0;
                 while index < span.1 {
                     let token = &self.tokens[index];
                     skip_block!(self, index, span);
@@ -250,6 +251,41 @@ impl Parser {
                             }
 
                             continue;
+                        } else if matches!(op, Operator::Question) {
+                            let question_index = index;
+                            let mut question_count = 0;
+
+                            let mut index = question_index;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::Operator(op) = &token.kind {
+                                    match op {
+                                        Operator::Question => {
+                                            question_count += 1;
+                                        }
+                                        Operator::Colon => {
+                                            question_count -= 1;
+                                            if question_count == 0 {
+                                                second_operator_index_for_ternary = index;
+                                                break;
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            if question_count != 0 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Unmatched '?' in ternary expression".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(question_index, span.1 - 1), false)
+                                );
+                            }
+
+                            operator_index = question_index;
+                            found_operator = true;
+                            break; // ternary operator is lowest precedence, stop here
                         }
                         
 
@@ -278,6 +314,17 @@ impl Parser {
                 }
 
                 if found_operator {
+                    if second_operator_index_for_ternary > span.0 {
+                        // ternary operator
+                        let condition = self.parse_node(NodeType::Expression, (span.0, operator_index))?;
+                        let true_expr = self.parse_node(NodeType::Expression, (operator_index + 1, second_operator_index_for_ternary))?;
+                        let false_expr = self.parse_node(NodeType::Expression, (second_operator_index_for_ternary + 1, span.1))?;
+                        return Ok(Node::TernaryExpression {
+                            condition: Box::new(condition),
+                            true_expression: Box::new(true_expr),
+                            false_expression: Box::new(false_expr),
+                        });
+                    }
                     if operator_index == span.0 { // unary prefix
                         let right = self.parse_node(NodeType::Expression, (operator_index + 1, span.1))?;
                         let operator_token = &self.tokens[operator_index];
