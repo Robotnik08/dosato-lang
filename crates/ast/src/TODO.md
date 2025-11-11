@@ -21,18 +21,17 @@
 - [X] Make Statement
 - [X] Const Statement
 - [X] Define Function Statement
-- [ ] Return Statement
-- [ ] Break Statement
-- [ ] Continue Statement
-- [ ] Class Statement
-- [ ] Enum Statement 
-- [ ] Inherits Statement
-- [ ] If/Unless Statement
-- [ ] While/Until Statement
-- [ ] Loop Statement
+- [X] Return Statement
+- [X] Break Statement
+- [X] Continue Statement
+- [X] Inherits Statement
+- [X] Include/Import Statement
+- [X] Loop Statement
+- [X] If/Unless Statement
+- [X] Else Statement
+- [X] While/Until Statement
 - [ ] For Statement
 - [ ] Switch/Match Statement
-- [ ] Include/Import Statement
-
-## Extensions
-- [ ] Support for postfix extensions
+- [ ] Class Statement
+- [ ] Enum Statement
+- [ ] Catch Statement

@@ -25,7 +25,7 @@ Rust, with its strong type system and memory safety guarantees, seemed like a be
 ![](https://geps.dev/progress/95)
 
 ### Parser progress:
-![](https://geps.dev/progress/65)
+![](https://geps.dev/progress/85)
 
 ### Compiler progress:
 ![](https://geps.dev/progress/0)

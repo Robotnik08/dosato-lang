@@ -85,7 +85,7 @@ impl Parser {
         (
             start.position.line,
             start.position.column,
-            end.span.1 - start.span.0
+            (end.span.1 - start.span.0)
         )
     }
 
@@ -619,97 +619,6 @@ impl Parser {
                     _ => unreachable!(),
                 }
             }
-            
-            NodeType::Statement => {
-                // Get first keyword
-                let first_token = &self.tokens[span.0];
-                let key_word_type = match &first_token.kind {
-                    TokenKind::KeyWord(kw) => kw,
-                    _ => {
-                        return Err(
-                            error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
-                        );
-                    }
-                };
-
-                if key_word_type.is_master_keyword() {
-                    match key_word_type {
-                        KeyWord::Do => {
-                            let node = self.parse_node(NodeType::Do, (span.0 + 1, span.1))?;
-                            Ok(node)
-                        }
-                        KeyWord::Set => {
-                            let node = self.parse_node(NodeType::Set, (span.0 + 1, span.1))?;
-                            Ok(node)
-                        }
-                        KeyWord::Make => {
-                            let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
-                            if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
-                                return Ok(Node::VariableDeclaration {
-                                    type_annotation,
-                                    constant: false,
-                                    uses_array_unwrapping,
-                                    identifiers,
-                                    values,
-                                })
-                            }
-                            Err(
-                                error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after make keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
-                            )
-                        }
-                        KeyWord::Const => {
-                            let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
-                            if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
-                                return Ok(Node::VariableDeclaration {
-                                    type_annotation,
-                                    constant: true,
-                                    uses_array_unwrapping,
-                                    identifiers,
-                                    values,
-                                })
-                            }
-                            Err(
-                                error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after const keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
-                            )
-                        }
-                        KeyWord::Define | KeyWord::Implement => {
-                            let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
-                            Ok(node)
-                        }
-                        KeyWord::Return => {
-                            let expression = if span.1 - span.0 > 1 {
-                                Some(self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?)
-                            } else {
-                                None
-                            };
-                            Ok(Node::Return {
-                                argument: expression.map(Box::new),
-                            })
-                        }
-                        KeyWord::Break => {
-                            if span.1 - span.0 > 1 {
-                                return Err(
-                                    error::Error::new(error::ErrorKind::SyntaxError, "Break statement does not take any arguments".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
-                                )
-                            }
-                            Ok(Node::Break)
-                        },
-                        KeyWord::Continue => {
-                            if span.1 - span.0 > 1 {
-                                return Err(
-                                    error::Error::new(error::ErrorKind::SyntaxError, "Continue statement does not take any arguments".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
-                                )
-                            }
-                            Ok(Node::Continue)
-                        },
-                        _ => Ok(Node::Blank)
-                    }
-                } else {
-                    Err(
-                        error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
-                    )
-                }
-            }
 
 
             NodeType::Do => {
@@ -1050,6 +959,215 @@ impl Parser {
                     type_annotation,
                     default_value,
                 })
+            }
+            
+
+
+            NodeType::Statement => {
+                // Get first keyword
+                let first_token = &self.tokens[span.0];
+                let key_word_type = match &first_token.kind {
+                    TokenKind::KeyWord(kw) => kw,
+                    _ => {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                        );
+                    }
+                };
+
+                if key_word_type.is_master_keyword() {
+                    match key_word_type {
+                        KeyWord::Do => {
+                            let node = self.parse_node(NodeType::Do, (span.0 + 1, span.1))?;
+                            Ok(node)
+                        }
+                        KeyWord::Set => {
+                            let node = self.parse_node(NodeType::Set, (span.0 + 1, span.1))?;
+                            Ok(node)
+                        }
+                        KeyWord::Make => {
+                            let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
+                            if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
+                                return Ok(Node::VariableDeclaration {
+                                    type_annotation,
+                                    constant: false,
+                                    uses_array_unwrapping,
+                                    identifiers,
+                                    values,
+                                })
+                            }
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after make keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                            )
+                        }
+                        KeyWord::Const => {
+                            let body = self.parse_node(NodeType::VariableDeclaration, (span.0 + 1, span.1))?;
+                            if let Node::VariableDeclaration { type_annotation, constant: _, uses_array_unwrapping, identifiers, values } = body {
+                                return Ok(Node::VariableDeclaration {
+                                    type_annotation,
+                                    constant: true,
+                                    uses_array_unwrapping,
+                                    identifiers,
+                                    values,
+                                })
+                            }
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after const keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                            )
+                        }
+                        KeyWord::Define | KeyWord::Implement => {
+                            let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
+                            Ok(node)
+                        }
+                        KeyWord::Return => {
+                            let expression = if span.1 - span.0 > 1 {
+                                Some(self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?)
+                            } else {
+                                None
+                            };
+                            Ok(Node::Return {
+                                argument: expression.map(Box::new),
+                            })
+                        }
+                        KeyWord::Break => {
+                            if span.1 - span.0 > 1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Break statement does not take any arguments".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                                )
+                            }
+                            Ok(Node::Break)
+                        }
+                        KeyWord::Continue => {
+                            if span.1 - span.0 > 1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Continue statement does not take any arguments".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                                )
+                            }
+                            Ok(Node::Continue)
+                        }
+                        KeyWord::Include => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected string literal after include keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                                )
+                            }
+
+                            let next_token = &self.tokens[span.0 + 1];
+                            if let TokenKind::StringLiteral(lit) = &next_token.kind {
+                                Ok(Node::Include {
+                                    string_literal: TokenKind::StringLiteral(lit.clone()),
+                                })
+                            } else {
+                                Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected string literal after include keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                                )
+                            }
+                        }
+                        KeyWord::Import => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected string literal after import keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                                )
+                            }
+
+                            let next_token = &self.tokens[span.0 + 1];
+                            if let TokenKind::StringLiteral(lit) = &next_token.kind {
+                                Ok(Node::Import {
+                                    string_literal: TokenKind::StringLiteral(lit.clone()),
+                                })
+                            } else {
+                                Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected string literal after import keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                                )
+                            }
+                        }
+                        KeyWord::Inherit => {
+                            let expression = self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?;
+                            Ok(Node::Inherit {
+                                expression: Box::new(expression),
+                            })
+                        }
+                        KeyWord::Loop => {
+                            let node = self.parse_node(NodeType::Do, (span.0 + 1, span.1))?;
+                            Ok(Node::Loop {
+                                body: Box::new(node),
+                            })
+                        }
+                        KeyWord::If | KeyWord::Unless => {
+                            let mut index = span.0 + 1;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::KeyWord(kw) = &token.kind {
+                                    if let KeyWord::Then = kw {
+                                        let expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
+                                        let body = self.parse_node(NodeType::Do, (index + 1, span.1))?;
+                                        return Ok(Node::If {
+                                            inverse: matches!(key_word_type, KeyWord::Unless),
+                                            expression: Box::new(expression),
+                                            body: Box::new(body),
+                                        });
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            // no then, it's postfix, so the body expression is the line before, which will get handled later in post processing
+                            let expression = self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?;
+                            Ok(Node::If {
+                                inverse: matches!(key_word_type, KeyWord::Unless),
+                                expression: Box::new(expression),
+                                body: Box::new(Node::Blank),
+                            })
+                        }
+                        KeyWord::Else => {
+                            if span.1 - span.0 <= 1 {
+                                return Ok(
+                                    Node::Else {
+                                        body: None,
+                                    }
+                                )
+                            }
+
+                            let body = self.parse_node(NodeType::Do, (span.0 + 1, span.1))?;
+                            Ok(Node::Else {
+                                body: Some(Box::new(body)),
+                            })
+                        }
+                        KeyWord::While | KeyWord::Until => {
+                            let mut index = span.0 + 1;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::KeyWord(kw) = &token.kind {
+                                    if let KeyWord::Then = kw {
+                                        let expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
+                                        let body = self.parse_node(NodeType::Do, (index + 1, span.1))?;
+                                        return Ok(Node::While {
+                                            inverse: matches!(key_word_type, KeyWord::Until),
+                                            expression: Box::new(expression),
+                                            body: Box::new(body),
+                                        });
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            // no then, it's postfix, so the body expression is the line before, which will get handled later in post processing
+                            let expression = self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?;
+                            Ok(Node::While {
+                                inverse: matches!(key_word_type, KeyWord::Until),
+                                expression: Box::new(expression),
+                                body: Box::new(Node::Blank),
+                            })
+                        }
+                        _ => Ok(Node::Blank)
+                    }
+                } else {
+                    Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected a master keyword at the start of statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                }
             }
 
             _ => {

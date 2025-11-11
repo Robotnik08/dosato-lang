@@ -5,11 +5,7 @@ pub enum KeyWord {
     Then,
 
     If,
-    IfNot,
     Else,
-    ElseIf,
-    ElseIfNot,
-    When,
     Unless,
 
     Make,
@@ -23,11 +19,10 @@ pub enum KeyWord {
     Return,
 
     For,
-    With,
     While,
-    During,
     Until,
-    Til,
+
+    Catch,
 
     Loop,
     Break,
@@ -71,11 +66,7 @@ pub static KEYWORD_MAP: phf::Map<&'static str, KeyWord> = phf_map! {
     "then" => KeyWord::Then,
 
     "if" => KeyWord::If,
-    "ifnot" => KeyWord::IfNot,
     "else" => KeyWord::Else,
-    "elseif" => KeyWord::ElseIf,
-    "elseifnot" => KeyWord::ElseIfNot,
-    "when" => KeyWord::When,
     "unless" => KeyWord::Unless,
 
     "make" => KeyWord::Make,
@@ -89,11 +80,10 @@ pub static KEYWORD_MAP: phf::Map<&'static str, KeyWord> = phf_map! {
     "return" => KeyWord::Return,
 
     "for" => KeyWord::For,
-    "with" => KeyWord::With,
     "while" => KeyWord::While,
-    "during" => KeyWord::During,
     "until" => KeyWord::Until,
-    "til" => KeyWord::Til,
+    
+    "catch" => KeyWord::Catch,
 
     "loop" => KeyWord::Loop,
     "break" => KeyWord::Break,
@@ -143,11 +133,7 @@ impl std::fmt::Debug for KeyWord {
             KeyWord::Do => write!(f, "Do"),
             KeyWord::Then => write!(f, "Then"),
             KeyWord::If => write!(f, "If"),
-            KeyWord::IfNot => write!(f, "IfNot"),
             KeyWord::Else => write!(f, "Else"),
-            KeyWord::ElseIf => write!(f, "ElseIf"),
-            KeyWord::ElseIfNot => write!(f, "ElseIfNot"),
-            KeyWord::When => write!(f, "When"),
             KeyWord::Unless => write!(f, "Unless"),
             KeyWord::Make => write!(f, "Make"),
             KeyWord::Const => write!(f, "Const"),
@@ -157,11 +143,9 @@ impl std::fmt::Debug for KeyWord {
             KeyWord::Import => write!(f, "Import"),
             KeyWord::Return => write!(f, "Return"),
             KeyWord::For => write!(f, "For"),
-            KeyWord::With => write!(f, "With"),
             KeyWord::While => write!(f, "While"),
-            KeyWord::During => write!(f, "During"),
             KeyWord::Until => write!(f, "Until"),
-            KeyWord::Til => write!(f, "Til"),
+            KeyWord::Catch => write!(f, "Catch"),
             KeyWord::Loop => write!(f, "Loop"),
             KeyWord::Break => write!(f, "Break"),
             KeyWord::Continue => write!(f, "Continue"),
@@ -194,7 +178,8 @@ impl KeyWord {
         matches!(self,
             KeyWord::Do
             | KeyWord::If
-            | KeyWord::IfNot
+            | KeyWord::Unless
+            | KeyWord::Else
             | KeyWord::Make
             | KeyWord::Const
             | KeyWord::Set
@@ -221,13 +206,7 @@ impl KeyWord {
         matches!(self,
             KeyWord::Then
             | KeyWord::Else
-            | KeyWord::ElseIf
-            | KeyWord::ElseIfNot
-            | KeyWord::When
             | KeyWord::Unless
-            | KeyWord::With
-            | KeyWord::During
-            | KeyWord::Til
         )
     }
 
@@ -252,7 +231,6 @@ impl KeyWord {
         matches!(self,
             KeyWord::Do
             | KeyWord::If
-            | KeyWord::IfNot
             | KeyWord::Set
             | KeyWord::Return
             | KeyWord::For

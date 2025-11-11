@@ -1,3 +1,5 @@
+use dosato_lexer::TokenKind;
+
 pub enum Node {
     Blank,
 
@@ -89,6 +91,38 @@ pub enum Node {
 
     Break,
     Continue,
+
+    Inherit {
+        expression: Box<Node>,
+    },
+
+    Import {
+        string_literal: TokenKind,
+    },
+
+    Include {
+        string_literal: TokenKind,
+    },
+
+    Loop {
+        body: Box<Node>,
+    },
+
+    If {
+        inverse: bool,
+        expression: Box<Node>,
+        body: Box<Node>,
+    },
+
+    While {
+        inverse: bool,
+        expression: Box<Node>,
+        body: Box<Node>,
+    },
+
+    Else {
+        body: Option<Box<Node>>,
+    },
 }
 
 pub enum NodeType {
@@ -115,6 +149,13 @@ pub enum NodeType {
     Do,
     Set,
     Return,
+    Inherit,
+    Import,
+    Include,
+    Loop,
+    If,
+    While,
+    Else
 }
 
 impl std::fmt::Debug for Node {
@@ -148,6 +189,16 @@ impl std::fmt::Debug for Node {
         
             Node::Break => write!(f, "Break"),
             Node::Continue => write!(f, "Continue"),
+
+            Node::Inherit { expression } => f.debug_struct("Inherit").field("expression", expression).finish(),
+            Node::Import { string_literal } => f.debug_struct("Import").field("string_literal", string_literal).finish(),
+            Node::Include { string_literal } => f.debug_struct("Include").field("string_literal", string_literal).finish(),
+
+            Node::Loop { body } => f.debug_struct("Loop").field("body", body).finish(),
+
+            Node::If { inverse, expression, body } => f.debug_struct("If").field("inverse", inverse).field("expression", expression).field("body", body).finish(),
+            Node::Else { body } => f.debug_struct("Else").field("body", body).finish(),
+            Node::While { inverse, expression, body } => f.debug_struct("While").field("inverse", inverse).field("expression", expression).field("body", body).finish(),
         }
     }
 }
