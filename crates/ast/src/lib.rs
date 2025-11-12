@@ -1197,8 +1197,10 @@ impl Parser {
                                 if let TokenKind::Operator(op) = &token.kind {
                                     if let Operator::FatArrow = op {
                                         // check if body is surrounded by { }
-                                        if self.encased_in_curly_braces((index + 1, span.1)) {
-                                            
+                                        if !self.encased_in_curly_braces((index + 1, span.1)) {
+                                            return Err(
+                                                error::Error::new(error::ErrorKind::SyntaxError, "Expected body of switch statement to be enclosed in curly braces".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index + 1, span.1 - 1), false)
+                                            )
                                         }
 
                                         let expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
