@@ -1,5 +1,7 @@
 mod structures;
 
+use std::vec;
+
 // Re-exporting for easier access
 pub use structures::ast::*;
 use dosato_runtime::*;
@@ -1015,7 +1017,7 @@ impl Parser {
                                 error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after const keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
                             )
                         }
-                        KeyWord::Define | KeyWord::Implement => {
+                        KeyWord::Define => {
                             let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
                             Ok(node)
                         }
@@ -1185,6 +1187,31 @@ impl Parser {
                                 loop_expression: Box::new(loop_expression),
                                 body: Box::new(Node::Blank),
                             })
+                        }
+                        KeyWord::Switch => {
+                            // find the => index
+                            let mut index = span.0 + 1;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::Operator(op) = &token.kind {
+                                    if let Operator::FatArrow = op {
+                                        // check if body is surrounded by { }
+                                        if self.encased_in_curly_braces((index + 1, span.1)) {
+                                            
+                                        }
+
+                                        let expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
+                                        let body: Vec<Node> = vec![];
+                                        
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false)
+                            )
                         }
                         _ => Ok(Node::Blank)
                     }

@@ -29,10 +29,8 @@ pub enum KeyWord {
     Continue,
     
     Switch,
-    Match,
 
     Class,
-    Implement,
     Inherit,
     Enum,
 
@@ -89,10 +87,8 @@ pub static KEYWORD_MAP: phf::Map<&'static str, KeyWord> = phf_map! {
     "continue" => KeyWord::Continue,
 
     "switch" => KeyWord::Switch,
-    "match" => KeyWord::Match,
 
     "class" => KeyWord::Class,
-    "implement" => KeyWord::Implement,
     "inherit" => KeyWord::Inherit,
     "enum" => KeyWord::Enum,
 
@@ -148,9 +144,7 @@ impl std::fmt::Debug for KeyWord {
             KeyWord::Break => write!(f, "Break"),
             KeyWord::Continue => write!(f, "Continue"),
             KeyWord::Switch => write!(f, "Switch"),
-            KeyWord::Match => write!(f, "Match"),
             KeyWord::Class => write!(f, "Class"),
-            KeyWord::Implement => write!(f, "Implement"),
             KeyWord::Inherit => write!(f, "Inherit"),
             KeyWord::Enum => write!(f, "Enum"),
             KeyWord::Other => write!(f, "Other"),
@@ -191,9 +185,7 @@ impl KeyWord {
             | KeyWord::Break
             | KeyWord::Continue
             | KeyWord::Switch
-            | KeyWord::Match
             | KeyWord::Class
-            | KeyWord::Implement
             | KeyWord::Inherit
             | KeyWord::Enum
         )
@@ -229,7 +221,6 @@ impl KeyWord {
             | KeyWord::Break
             | KeyWord::Continue
             | KeyWord::Switch
-            | KeyWord::Match
         )
     }
 
