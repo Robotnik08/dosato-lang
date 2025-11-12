@@ -123,6 +123,11 @@ pub enum Node {
     Else {
         body: Option<Box<Node>>,
     },
+
+    For {
+        loop_expression: Box<Node>,
+        body: Box<Node>,
+    },
 }
 
 pub enum NodeType {
@@ -155,7 +160,8 @@ pub enum NodeType {
     Loop,
     If,
     While,
-    Else
+    Else,
+    For
 }
 
 impl std::fmt::Debug for Node {
@@ -199,6 +205,7 @@ impl std::fmt::Debug for Node {
             Node::If { inverse, expression, body } => f.debug_struct("If").field("inverse", inverse).field("expression", expression).field("body", body).finish(),
             Node::Else { body } => f.debug_struct("Else").field("body", body).finish(),
             Node::While { inverse, expression, body } => f.debug_struct("While").field("inverse", inverse).field("expression", expression).field("body", body).finish(),
+            Node::For { loop_expression, body } => f.debug_struct("For").field("loop_expression", loop_expression).field("body", body).finish(),
         }
     }
 }

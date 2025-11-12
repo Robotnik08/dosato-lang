@@ -37,7 +37,6 @@ pub enum KeyWord {
     Enum,
 
     Other,
-    In,
 
     // Types
     Any,
@@ -98,7 +97,6 @@ pub static KEYWORD_MAP: phf::Map<&'static str, KeyWord> = phf_map! {
     "enum" => KeyWord::Enum,
 
     "other" => KeyWord::Other,
-    "in" => KeyWord::In,
 
     "any" => KeyWord::Any,
 
@@ -156,7 +154,6 @@ impl std::fmt::Debug for KeyWord {
             KeyWord::Inherit => write!(f, "Inherit"),
             KeyWord::Enum => write!(f, "Enum"),
             KeyWord::Other => write!(f, "Other"),
-            KeyWord::In => write!(f, "In"),
             KeyWord::Any => write!(f, "Any"),
             KeyWord::Float => write!(f, "Float"),
             KeyWord::Int => write!(f, "Int"),
@@ -199,14 +196,6 @@ impl KeyWord {
             | KeyWord::Implement
             | KeyWord::Inherit
             | KeyWord::Enum
-        )
-    }
-
-    pub fn is_extension_keyword(&self) -> bool {
-        matches!(self,
-            KeyWord::Then
-            | KeyWord::Else
-            | KeyWord::Unless
         )
     }
 

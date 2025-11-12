@@ -1161,6 +1161,31 @@ impl Parser {
                                 body: Box::new(Node::Blank),
                             })
                         }
+                        KeyWord::For => {
+                            let mut index = span.0 + 1;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::KeyWord(kw) = &token.kind {
+                                    if let KeyWord::Then = kw {
+                                        let loop_expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
+                                        let body = self.parse_node(NodeType::Do, (index + 1, span.1))?;
+                                        return Ok(Node::For {
+                                            loop_expression: Box::new(loop_expression),
+                                            body: Box::new(body),
+                                        });
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            // no then, it's postfix, so the body expression is the line before, which will get handled later in post processing    
+                            let loop_expression = self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?;
+                            Ok(Node::For {
+                                loop_expression: Box::new(loop_expression),
+                                body: Box::new(Node::Blank),
+                            })
+                        }
                         _ => Ok(Node::Blank)
                     }
                 } else {

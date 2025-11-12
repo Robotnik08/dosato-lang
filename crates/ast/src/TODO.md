@@ -30,7 +30,7 @@
 - [X] If/Unless Statement
 - [X] Else Statement
 - [X] While/Until Statement
-- [ ] For Statement
+- [X] For Statement
 - [ ] Switch/Match Statement
 - [ ] Class Statement
 - [ ] Enum Statement
