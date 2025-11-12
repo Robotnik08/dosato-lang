@@ -1204,8 +1204,75 @@ impl Parser {
                                         }
 
                                         let expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
-                                        let body: Vec<Node> = vec![];
+                                        let mut body: Vec<Node> = vec![];
+
+                                        // on each => in the body, split into case statements
+                                        let mut body_index = index + 2; // skip the opening {
+                                        let body_end = span.1 - 1; // skip the closing }
+                                        let mut case_start = body_index;
+                                        let body_span = (body_index, body_end);
+                                        while body_index < body_end {
+                                            let body_token = &self.tokens[body_index];
+                                            skip_block!(self, body_index, body_span);
+                                            if let TokenKind::Operator(body_op) = &body_token.kind {
+                                                if let Operator::FatArrow = body_op {
+                                                    let case_node = self.parse_node(NodeType::Expression, (case_start, body_index))?;
+                                                    case_start = body_index + 1;
+
+                                                    // if curly brace follows, skip the block and thats the body (block)
+                                                    body_index += 1;
+                                                    if body_index < body_end {
+                                                        let next_token = &self.tokens[body_index];
+                                                        if let TokenKind::BracketOpen(BracketType::Brace(_)) = &next_token.kind {
+                                                            skip_block!(self, body_index, body_span);
+                                                        } else {
+                                                            // else, parse until the next comma
+                                                            let mut inner_body_index = body_index;
+                                                            while inner_body_index < body_end {
+                                                                let inner_token = &self.tokens[inner_body_index];
+                                                                skip_block!(self, inner_body_index, body_span);
+                                                                if let TokenKind::Operator(inner_op) = &inner_token.kind {
+                                                                    if let Operator::Comma = inner_op {
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                inner_body_index += 1;
+                                                            }
+
+                                                            body_index = inner_body_index;
+                                                        }
+
+                                                        let case_body = self.parse_node(NodeType::Do, (case_start, body_index + 1))?;
+
+                                                        body.push(Node::Case {
+                                                            expressions: vec![case_node],
+                                                            body: Box::new(case_body),
+                                                        });
+
+                                                        continue;
+                                                    }
+
+                                                    return Err(
+                                                        error::Error::new(error::ErrorKind::SyntaxError, "Expected case body after fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start - 1, body_index), false)
+                                                    )
+                                                }
+                                            }
+                                            body_index += 1;
+                                        }
+
+                                        if case_start == body_end {
+                                            return Err(
+                                                error::Error::new(error::ErrorKind::SyntaxError, "Empty switch body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start - 1, body_end - 1), false)
+                                            )
+                                        }
+
+                                        let case_node = self.parse_node(NodeType::Expression, (case_start, body_end))?;
+                                        body.push(case_node);
                                         
+                                        return Ok(Node::Switch {
+                                            expression: Box::new(expression),
+                                            body
+                                        });
                                     }
                                 }
                                 index += 1;

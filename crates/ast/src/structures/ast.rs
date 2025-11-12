@@ -173,8 +173,7 @@ pub enum NodeType {
     Else,
     For,
 
-    Switch,
-    Case
+    Switch
 }
 
 impl std::fmt::Debug for Node {
