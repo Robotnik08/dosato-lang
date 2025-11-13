@@ -32,6 +32,7 @@
 - [X] While/Until Statement
 - [X] For Statement
 - [ ] Switch/Match Statement
+    - TO DO: Case needs commas between expressions
 - [ ] Class Statement
 - [ ] Enum Statement
 - [ ] Catch Statement
