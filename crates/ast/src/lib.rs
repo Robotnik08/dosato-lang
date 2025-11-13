@@ -1259,15 +1259,6 @@ impl Parser {
                                             }
                                             body_index += 1;
                                         }
-
-                                        if case_start == body_end {
-                                            return Err(
-                                                error::Error::new(error::ErrorKind::SyntaxError, "Empty switch body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start - 1, body_end - 1), false)
-                                            )
-                                        }
-
-                                        let case_node = self.parse_node(NodeType::Expression, (case_start, body_end))?;
-                                        body.push(case_node);
                                         
                                         return Ok(Node::Switch {
                                             expression: Box::new(expression),
