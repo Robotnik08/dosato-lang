@@ -1216,9 +1216,36 @@ impl Parser {
                                             skip_block!(self, body_index, body_span);
                                             if let TokenKind::Operator(body_op) = &body_token.kind {
                                                 if let Operator::FatArrow = body_op {
-                                                    println!("Found case fat arrow at index {} span: ({} {})", body_index, case_start, body_index);
-                                                    let case_node = self.parse_node(NodeType::Expression, (case_start, body_index))?;
-                                                    println!("Parsed case expression: {:?}", case_node);
+                                                    let mut cases: Vec<Node> = vec![];
+                                                    if case_start + 1 < body_index {
+                                                        let mut index = case_start;
+
+                                                        while index < body_index {
+                                                            let token = &self.tokens[index];
+                                                            skip_block!(self, index, body_span);
+                                                            if let TokenKind::Operator(op) = &token.kind {
+                                                                if let Operator::Comma = op {
+                                                                    let case_expr = self.parse_node(NodeType::Expression, (case_start, index))?;
+                                                                    cases.push(case_expr);
+                                                                    case_start = index + 1;
+                                                                }
+                                                            }
+                                                            index += 1;
+                                                        }
+
+                                                        let case_expr = self.parse_node(NodeType::Expression, (case_start, body_index))?;
+                                                        cases.push(case_expr);
+                                                    } else if case_start == body_index {
+                                                        return Err(
+                                                            error::Error::new(error::ErrorKind::SyntaxError, "Expected at least one case expression before fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start, body_index), false)
+                                                        );
+                                                    } else {
+                                                        let single_token = &self.tokens[case_start];
+                                                        if !matches!(single_token.kind, TokenKind::KeyWord(KeyWord::Other)) {
+                                                            let case_expr = self.parse_node(NodeType::Expression, (case_start, body_index))?;
+                                                            cases.push(case_expr);
+                                                        } // If OTHER, dont add any case expressions, meaning default case
+                                                    }
 
                                                     let body_start_index = body_index + 1;
                                                     // if curly brace follows, skip the block and thats the body (block)
@@ -1250,7 +1277,7 @@ impl Parser {
                                                         let case_body = self.parse_node(NodeType::Do, (body_start_index, body_index))?;
 
                                                         body.push(Node::Case {
-                                                            expressions: vec![case_node],
+                                                            expressions: cases,
                                                             body: Box::new(case_body),
                                                         });
 
