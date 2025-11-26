@@ -47,6 +47,7 @@ pub enum Node {
         return_type: dosato_lexer::KeyWord,
         parameters: Vec<Node>, // declaration nodes for parameters
         body: Box<Node>,
+        is_class: bool,
     },
 
     FunctionParameter {
@@ -194,7 +195,7 @@ impl std::fmt::Debug for Node {
             Node::TernaryExpression { condition, true_expression, false_expression } => f.debug_struct("TernaryExpression").field("condition", condition).field("true_expression", true_expression).field("false_expression", false_expression).finish(),
 
             Node::VariableDeclaration { type_annotation, constant, uses_array_unwrapping, identifiers, values } => f.debug_struct("VariableDeclaration").field("type_annotation", type_annotation).field("constant", constant).field("uses_array_unwrapping", uses_array_unwrapping).field("identifiers", identifiers).field("values", values).finish(),
-            Node::FunctionDeclaration { id, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("id", id).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
+            Node::FunctionDeclaration { id, return_type, parameters, body, is_class } => f.debug_struct("FunctionDeclaration").field("id", id).field("return_type", return_type).field("parameters", parameters).field("body", body).field("is_class", is_class).finish(),
             Node::FunctionParameter { id, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("id", id).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
             Node::ArrayExpression { elements } => f.debug_struct("ArrayExpression").field("elements", elements).finish(),
             Node::ObjectExpression { properties } => f.debug_struct("ObjectExpression").field("properties", properties).finish(),

@@ -897,6 +897,7 @@ impl Parser {
                             parameters: parameter_nodes,
                             return_type,
                             body: Box::new(body),
+                            is_class: false
                         })
                     } else {
                         Err(
@@ -1020,6 +1021,33 @@ impl Parser {
                         KeyWord::Define => {
                             let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
                             Ok(node)
+                        }
+                        KeyWord::Class => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected class name identifier after class keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+                            let first_token_after_class = &self.tokens[span.0 + 1];
+                            if !matches!(&first_token_after_class.kind, TokenKind::Identifier(_)) {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected class name identifier after class keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+
+                            let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
+                            if let Node::FunctionDeclaration { id, parameters, return_type, body, is_class: _ } = node {
+                                return Ok(Node::FunctionDeclaration {
+                                    id,
+                                    parameters,
+                                    return_type,
+                                    body,
+                                    is_class: true,
+                                })
+                            }
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Invalid class declaration".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                            )
                         }
                         KeyWord::Return => {
                             let expression = if span.1 - span.0 > 1 {

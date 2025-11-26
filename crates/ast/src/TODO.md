@@ -32,6 +32,8 @@
 - [X] While/Until Statement
 - [X] For Statement
 - [X] Switch/Match Statement
-- [ ] Class Statement
+- [X] Class Statement
 - [ ] Enum Statement
 - [ ] Catch Statement
+
+- [ ] Check for no panics in clearly broken code (robust error handling)
