@@ -1,5 +1,7 @@
 mod structures;
 
+use std::vec;
+
 // Re-exporting for easier access
 pub use structures::ast::*;
 use dosato_runtime::*;
@@ -62,6 +64,7 @@ macro_rules! skip_block_backwards {
 pub struct Parser {
     tokens: Vec<dosato_lexer::Token>,
     source_name: Option<String>,
+    name_table: names::NameTable,
 }
 
 impl Parser {
@@ -70,10 +73,11 @@ impl Parser {
         let tokens = tokens.into_iter().filter(|token| {
             !matches!(token.kind, dosato_lexer::TokenKind::Comment(_))
         }).collect();
-        Self { tokens, source_name }
+        Self { tokens, source_name, name_table: names::NameTable::new() }
     }
 
-    pub fn parse(&self) -> Result<Node, error::Error> {
+    pub fn parse(&mut self, name_table: names::NameTable) -> Result<Node, error::Error> {
+        self.name_table = name_table;
         self.parse_node(NodeType::Program, (0, self.tokens.len()))
     }
 
@@ -187,8 +191,14 @@ impl Parser {
                 if span.1 - span.0 == 1 {
                     let token = &self.tokens[span.0];
                     match &token.kind {
-                        TokenKind::Identifier(_) => {
-                            return Ok(Node::Identifier(0));
+                        TokenKind::Identifier(word) => {
+                            if let Some(id) = self.name_table.get(word) {
+                                return Ok(Node::Identifier(*id));
+                            } else {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", word), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                                );
+                            }
                         }
                         TokenKind::IntegerLiteral(_) | 
                         TokenKind::NumberLiteral(_) | 
@@ -863,8 +873,8 @@ impl Parser {
 
                 // Next token must be an identifier (function name)
                 let name_token = &self.tokens[start_of_function];
-                let _name = if let TokenKind::Identifier(id) = &name_token.kind {
-                    id
+                let name = if let TokenKind::Identifier(word) = &name_token.kind {
+                    word
                 } else {
                     return Err(
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
@@ -872,6 +882,11 @@ impl Parser {
                 };
 
                 // Next token must be opening parenthesis
+                if span.1 <= start_of_function + 2 {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function + 1, start_of_function + 1), false)
+                    )
+                }
                 let open_paren_token = &self.tokens[start_of_function + 1];
                 if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &open_paren_token.kind {
                     // find closing parenthesis
@@ -888,13 +903,28 @@ impl Parser {
                         }
 
                         // the rest is the function body
+                        if self.encased_in_curly_braces((index + 1, span.1)) == false {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Invalid function body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index + 1, span.1 - 1), false)
+                            )
+                        }
+
                         let body = self.parse_node(NodeType::Block, (index + 2, span.1 - 1))?;
 
+                        let id = if let Some(id) = self.name_table.get(name) {
+                            *id
+                        } else {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", name), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
+                            )
+                        };
+
                         Ok(Node::FunctionDeclaration {
-                            id: 0,
+                            id,
                             parameters: parameter_nodes,
                             return_type,
                             body: Box::new(body),
+                            is_class: false
                         })
                     } else {
                         Err(
@@ -924,9 +954,9 @@ impl Parser {
                 };
 
                 let name_token = &self.tokens[current_index];
-                let _name = if let TokenKind::Identifier(id) = &name_token.kind {
+                let name = if let TokenKind::Identifier(word) = &name_token.kind {
                     current_index += 1;
-                    id
+                    word
                 } else {
                     return Err(
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected parameter name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(current_index, current_index), false)
@@ -954,11 +984,77 @@ impl Parser {
                     Box::new(Node::Blank)
                 };
 
+                let id = if let Some(id) = self.name_table.get(name) {
+                    *id
+                } else {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", name), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                };
+
                 Ok(Node::FunctionParameter {
-                    id: 0,
+                    id,
                     type_annotation,
                     default_value,
                 })
+            }
+
+            
+            NodeType::EnumDeclaration => {
+                if span.0 >= span.1 {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected enum name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                }
+                if let TokenKind::Identifier(name) = &self.tokens[span.0].kind {
+                    if self.encased_in_curly_braces((span.0 + 1, span.1)) == false {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Invalid enum body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                        )
+                    }
+
+                    let id = if let Some(id) = self.name_table.get(name) {
+                        *id
+                    } else {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", name), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                        )
+                    };
+
+                    let body_span = (span.0 + 2, span.1 - 1);
+
+                    let mut properties: Vec<Node> = Vec::new();
+                    if body_span.0 == body_span.1 {
+                        return Ok(Node::EnumDeclaration { id, properties });
+                    }
+
+                    let mut index = body_span.0;
+                    let mut current_property_start = index;
+                    while index < body_span.1 {
+                        let token = &self.tokens[index];
+                        skip_block!(self, index, body_span);
+                        if let TokenKind::Operator(op) = &token.kind {
+                            if let Operator::Comma = op {
+                                let property = self.parse_node(NodeType::ObjectProperty, (current_property_start, index))?;
+                                properties.push(property);
+                                current_property_start = index + 1;
+                            }
+                        }
+                        index += 1;
+                    }
+
+                    // remaining property
+                    if index > current_property_start {
+                        let property = self.parse_node(NodeType::ObjectProperty, (current_property_start, index))?;
+                        properties.push(property);
+                    }
+
+                    Ok(Node::EnumDeclaration{ id, properties })
+                } else {
+                    Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected enum name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                }
             }
             
 
@@ -1015,9 +1111,42 @@ impl Parser {
                                 error::Error::new(error::ErrorKind::SyntaxError, "Expected variable declaration after const keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
                             )
                         }
-                        KeyWord::Define | KeyWord::Implement => {
+                        KeyWord::Define => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier after define keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+                            
                             let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
                             Ok(node)
+                        }
+                        KeyWord::Class => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected class name identifier after class keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+                            let first_token_after_class = &self.tokens[span.0 + 1];
+                            if !matches!(&first_token_after_class.kind, TokenKind::Identifier(_)) {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected class name identifier after class keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+
+                            let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
+                            if let Node::FunctionDeclaration { id, parameters, return_type, body, is_class: _ } = node {
+                                return Ok(Node::FunctionDeclaration {
+                                    id,
+                                    parameters,
+                                    return_type,
+                                    body,
+                                    is_class: true,
+                                })
+                            }
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Invalid class declaration".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                            )
                         }
                         KeyWord::Return => {
                             let expression = if span.1 - span.0 > 1 {
@@ -1159,6 +1288,189 @@ impl Parser {
                                 inverse: matches!(key_word_type, KeyWord::Until),
                                 expression: Box::new(expression),
                                 body: Box::new(Node::Blank),
+                            })
+                        }
+                        KeyWord::For => {
+                            let mut index = span.0 + 1;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::KeyWord(kw) = &token.kind {
+                                    if let KeyWord::Then = kw {
+                                        let loop_expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
+                                        let body = self.parse_node(NodeType::Do, (index + 1, span.1))?;
+                                        return Ok(Node::For {
+                                            loop_expression: Box::new(loop_expression),
+                                            body: Box::new(body),
+                                        });
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            // no then, it's postfix, so the body expression is the line before, which will get handled later in post processing    
+                            let loop_expression = self.parse_node(NodeType::Expression, (span.0 + 1, span.1))?;
+                            Ok(Node::For {
+                                loop_expression: Box::new(loop_expression),
+                                body: Box::new(Node::Blank),
+                            })
+                        }
+                        KeyWord::Switch => {
+                            // find the => index
+                            let mut index = span.0 + 1;
+                            while index < span.1 {
+                                let token = &self.tokens[index];
+                                skip_block!(self, index, span);
+                                if let TokenKind::Operator(op) = &token.kind {
+                                    if let Operator::FatArrow = op {
+                                        // check if body is surrounded by { }
+                                        if !self.encased_in_curly_braces((index + 1, span.1)) {
+                                            return Err(
+                                                error::Error::new(error::ErrorKind::SyntaxError, "Expected body of switch statement to be enclosed in curly braces".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index + 1, span.1 - 1), false)
+                                            )
+                                        }
+
+                                        let expression = self.parse_node(NodeType::Expression, (span.0 + 1, index))?;
+                                        let mut body: Vec<Node> = vec![];
+
+                                        // on each => in the body, split into case statements
+                                        let mut body_index = index + 2; // skip the opening {
+                                        let body_end = span.1 - 1; // skip the closing }
+                                        let mut case_start = body_index;
+                                        let body_span = (body_index, body_end);
+                                        while body_index < body_end {
+                                            let body_token = &self.tokens[body_index];
+                                            skip_block!(self, body_index, body_span);
+                                            if let TokenKind::Operator(body_op) = &body_token.kind {
+                                                if let Operator::FatArrow = body_op {
+                                                    let mut cases: Vec<Node> = vec![];
+                                                    if case_start + 1 < body_index {
+                                                        let mut index = case_start;
+
+                                                        while index < body_index {
+                                                            let token = &self.tokens[index];
+                                                            skip_block!(self, index, body_span);
+                                                            if let TokenKind::Operator(op) = &token.kind {
+                                                                if let Operator::Comma = op {
+                                                                    let case_expr = self.parse_node(NodeType::Expression, (case_start, index))?;
+                                                                    cases.push(case_expr);
+                                                                    case_start = index + 1;
+                                                                }
+                                                            }
+                                                            index += 1;
+                                                        }
+
+                                                        let case_expr = self.parse_node(NodeType::Expression, (case_start, body_index))?;
+                                                        cases.push(case_expr);
+                                                    } else if case_start == body_index {
+                                                        return Err(
+                                                            error::Error::new(error::ErrorKind::SyntaxError, "Expected at least one case expression before fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start, body_index), false)
+                                                        );
+                                                    } else {
+                                                        let single_token = &self.tokens[case_start];
+                                                        if !matches!(single_token.kind, TokenKind::KeyWord(KeyWord::Other)) {
+                                                            let case_expr = self.parse_node(NodeType::Expression, (case_start, body_index))?;
+                                                            cases.push(case_expr);
+                                                        } // If OTHER, dont add any case expressions, meaning default case
+                                                    }
+
+                                                    let body_start_index = body_index + 1;
+                                                    // if curly brace follows, skip the block and thats the body (block)
+                                                    body_index += 1;
+                                                    if body_index < body_end {
+                                                        let next_token = &self.tokens[body_index];
+                                                        if let TokenKind::BracketOpen(BracketType::Brace(_)) = &next_token.kind {
+                                                            skip_block!(self, body_index, body_span);
+                                                            body_index += 1;
+                                                            case_start = body_index;
+                                                        } else {
+                                                            // else, parse until the next comma
+                                                            let mut inner_body_index = body_index;
+                                                            while inner_body_index < body_end - 1 {
+                                                                let inner_token = &self.tokens[inner_body_index];
+                                                                skip_block!(self, inner_body_index, body_span);
+                                                                if let TokenKind::Operator(inner_op) = &inner_token.kind {
+                                                                    if let Operator::Comma = inner_op {
+                                                                        break;
+                                                                    }
+                                                                }
+                                                                inner_body_index += 1;
+                                                            }
+
+                                                            body_index = inner_body_index;
+                                                            case_start = body_index + 1;
+                                                        }
+                                                        
+                                                        let case_body = self.parse_node(NodeType::Do, (body_start_index, body_index))?;
+
+                                                        body.push(Node::Case {
+                                                            expressions: cases,
+                                                            body: Box::new(case_body),
+                                                        });
+
+
+                                                        continue;
+                                                    }
+
+                                                    return Err(
+                                                        error::Error::new(error::ErrorKind::SyntaxError, "Expected case body after fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start - 1, body_index), false)
+                                                    )
+                                                }
+                                            }
+                                            body_index += 1;
+                                        }
+
+                                        if case_start < body_end {
+                                            return Err(
+                                                error::Error::new(error::ErrorKind::SyntaxError, "Switch statement wasn't completed".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start, body_end - 1), false)
+                                            )
+                                        }
+                                        
+                                        return Ok(Node::Switch {
+                                            expression: Box::new(expression),
+                                            body
+                                        });
+                                    }
+                                }
+                                index += 1;
+                            }
+
+                            Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Expected fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false)
+                            )
+                        }
+                        KeyWord::Enum => {
+                            let node = self.parse_node(NodeType::EnumDeclaration, (span.0 + 1, span.1))?;
+                            Ok(node)
+                        }
+                        KeyWord::Catch => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Empty catch body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+                            let first_token = &self.tokens[span.0 + 1];
+                            let mut index = span.0 + 1;
+                            let error_variable = if let TokenKind::Identifier(word) = &first_token.kind {
+                                index += 1;
+
+                                let id = if let Some(id) = self.name_table.get(word) {
+                                    *id
+                                } else {
+                                    return Err(
+                                        error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", word), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                    )
+                                };
+
+                                Some(id)
+                            } else {
+                                None
+                            };
+
+                            let body = self.parse_node(NodeType::Do, (index, span.1))?;
+                            Ok(Node::Catch {
+                                error_variable,
+                                body: Box::new(body),
                             })
                         }
                         _ => Ok(Node::Blank)

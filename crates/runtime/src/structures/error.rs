@@ -101,11 +101,24 @@ impl Error {
 
                 // Print indicator line
                 let mut indicator_line = String::new();
+                let mut current_col = 1;
+                let mut current_line = self.line - 1;
+                let mut current_line_str = lines[current_line];
                 for _ in 0..(self.column - 1) {
                     indicator_line.push(' ');
+                    current_col += 1;
                 }
                 for _ in 0..self.error_length.max(1) {
                     indicator_line.push('^');
+                    if current_line_str.chars().nth(current_col - 1) == None {
+                        current_line += 1;
+                        current_line_str = lines.get(current_line).unwrap_or(&"");
+                        current_col = 1;
+                        println!("{}\n{}", indicator_line.red(), current_line_str);
+                        indicator_line = String::new();
+                    } else {
+                        current_col += 1;
+                    }
                 }
                 println!("{}", indicator_line.red());
             }

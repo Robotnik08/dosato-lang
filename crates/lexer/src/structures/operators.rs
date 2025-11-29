@@ -69,6 +69,7 @@ pub enum Operator {
     OrOrAssign,
     XorXorAssign,
     TypeCast,
+    In
 }
 
 pub static OPERATOR_CHARS: &str = "+-*/%=><!&^|~?:.,;#";
@@ -142,6 +143,7 @@ pub static OPERATOR_MAP: phf::Map<&'static str, Operator> = phf_map! {
     "|>=" => Operator::PipeAssign,
     "#" => Operator::Hash,
     "as" => Operator::TypeCast,
+    "in" => Operator::In
 };
 
 impl Copy for Operator {}
@@ -222,6 +224,7 @@ impl std::fmt::Debug for Operator {
             Operator::XorXorAssign => write!(f, "XorXorAssign(^^=)"),
             Operator::Hash => write!(f, "Hash(#)"),
             Operator::TypeCast => write!(f, "TypeCast(as)"),
+            Operator::In => write!(f, "In(in)"),
         }
     }
 }
@@ -249,6 +252,7 @@ impl Operator {
             AndAnd | XorXor => 12,
             OrOr | NullCoalesce | Pipe => 13,
             Semicolon | RangeUp | RangeDown | RangeUpInclusive | RangeDownInclusive => 14,
+            In => 15,
             Question | Colon => 15,
             Comma | FatArrow => 16,
 

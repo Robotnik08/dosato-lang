@@ -47,6 +47,7 @@ pub enum Node {
         return_type: dosato_lexer::KeyWord,
         parameters: Vec<Node>, // declaration nodes for parameters
         body: Box<Node>,
+        is_class: bool,
     },
 
     FunctionParameter {
@@ -123,6 +124,31 @@ pub enum Node {
     Else {
         body: Option<Box<Node>>,
     },
+
+    For {
+        loop_expression: Box<Node>,
+        body: Box<Node>,
+    },
+
+    Switch {
+        expression: Box<Node>,
+        body: Vec<Node>,
+    },
+
+    Case {
+        expressions: Vec<Node>,
+        body: Box<Node>,
+    },
+    
+    EnumDeclaration {
+        id: u16, // id based on the identifier table
+        properties: Vec<Node>,
+    },
+
+    Catch {
+        error_variable: Option<u16>, // id based on the identifier table
+        body: Box<Node>,
+    }
 }
 
 pub enum NodeType {
@@ -155,7 +181,12 @@ pub enum NodeType {
     Loop,
     If,
     While,
-    Else
+    Else,
+    For,
+
+    Switch,
+
+    EnumDeclaration,
 }
 
 impl std::fmt::Debug for Node {
@@ -176,7 +207,7 @@ impl std::fmt::Debug for Node {
             Node::TernaryExpression { condition, true_expression, false_expression } => f.debug_struct("TernaryExpression").field("condition", condition).field("true_expression", true_expression).field("false_expression", false_expression).finish(),
 
             Node::VariableDeclaration { type_annotation, constant, uses_array_unwrapping, identifiers, values } => f.debug_struct("VariableDeclaration").field("type_annotation", type_annotation).field("constant", constant).field("uses_array_unwrapping", uses_array_unwrapping).field("identifiers", identifiers).field("values", values).finish(),
-            Node::FunctionDeclaration { id, return_type, parameters, body } => f.debug_struct("FunctionDeclaration").field("id", id).field("return_type", return_type).field("parameters", parameters).field("body", body).finish(),
+            Node::FunctionDeclaration { id, return_type, parameters, body, is_class } => f.debug_struct("FunctionDeclaration").field("id", id).field("return_type", return_type).field("parameters", parameters).field("body", body).field("is_class", is_class).finish(),
             Node::FunctionParameter { id, type_annotation, default_value } => f.debug_struct("FunctionParameter").field("id", id).field("type_annotation", type_annotation).field("default_value", default_value).finish(),
             Node::ArrayExpression { elements } => f.debug_struct("ArrayExpression").field("elements", elements).finish(),
             Node::ObjectExpression { properties } => f.debug_struct("ObjectExpression").field("properties", properties).finish(),
@@ -199,6 +230,12 @@ impl std::fmt::Debug for Node {
             Node::If { inverse, expression, body } => f.debug_struct("If").field("inverse", inverse).field("expression", expression).field("body", body).finish(),
             Node::Else { body } => f.debug_struct("Else").field("body", body).finish(),
             Node::While { inverse, expression, body } => f.debug_struct("While").field("inverse", inverse).field("expression", expression).field("body", body).finish(),
+            Node::For { loop_expression, body } => f.debug_struct("For").field("loop_expression", loop_expression).field("body", body).finish(),
+            Node::Switch { expression, body } => f.debug_struct("Switch").field("expression", expression).field("body", body).finish(),
+            Node::Case { expressions, body } => f.debug_struct("Case").field("expressions", expressions).field("body", body).finish(),
+
+            Node::EnumDeclaration { id, properties } => f.debug_struct("EnumDeclaration").field("id", id).field("properties", properties).finish(),
+            Node::Catch { error_variable, body } => f.debug_struct("Catch").field("error_variable", error_variable).field("body", body).finish(),
         }
     }
 }

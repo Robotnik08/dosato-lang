@@ -3,9 +3,11 @@ pub use dosato_runtime::*;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn eval_simple(source: &str) -> Result<(), error::Error> {
-    let mut lexer = dosato_lexer::Lexer::new(source);
+    let mut table = names::NameTable::new();
+    let mut lexer = dosato_lexer::Lexer::new(source, &mut table);
+    
     let tokens = lexer.tokenise()?;
-    let parser = dosato_ast::Parser::new(tokens.clone(), Some("main".to_string()));
+    let mut parser = dosato_ast::Parser::new(tokens.clone(), Some("main".to_string()));
     
     println!("Token amount: {}", tokens.len());
 
@@ -15,7 +17,7 @@ pub fn eval_simple(source: &str) -> Result<(), error::Error> {
         index += 1;
     }
 
-    let ast = parser.parse()?;
+    let ast = parser.parse(table)?;
 
     println!("{:#?}", ast);
 
