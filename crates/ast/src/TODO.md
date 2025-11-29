@@ -1,5 +1,7 @@
 # Parser TODOs
 
+- [ ] Identifier table integration
+
 ## Expressions
 
 - [X] Single token expressions (literals, identifiers)
@@ -24,7 +26,7 @@
 - [X] Return Statement
 - [X] Break Statement
 - [X] Continue Statement
-- [X] Inherits Statement
+- [X] Inherit Statement
 - [X] Include/Import Statement
 - [X] Loop Statement
 - [X] If/Unless Statement
@@ -33,7 +35,7 @@
 - [X] For Statement
 - [X] Switch/Match Statement
 - [X] Class Statement
-- [ ] Enum Statement
-- [ ] Catch Statement
+- [X] Enum Statement
+- [X] Catch Statement
 
-- [ ] Check for no panics in clearly broken code (robust error handling)
+- [X] Check for no panics in clearly broken code (robust error handling)

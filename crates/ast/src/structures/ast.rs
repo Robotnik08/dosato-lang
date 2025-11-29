@@ -138,6 +138,16 @@ pub enum Node {
     Case {
         expressions: Vec<Node>,
         body: Box<Node>,
+    },
+    
+    EnumDeclaration {
+        id: u16, // id based on the identifier table
+        properties: Vec<Node>,
+    },
+
+    Catch {
+        error_variable: Option<u16>, // id based on the identifier table
+        body: Box<Node>,
     }
 }
 
@@ -174,7 +184,9 @@ pub enum NodeType {
     Else,
     For,
 
-    Switch
+    Switch,
+
+    EnumDeclaration,
 }
 
 impl std::fmt::Debug for Node {
@@ -221,6 +233,9 @@ impl std::fmt::Debug for Node {
             Node::For { loop_expression, body } => f.debug_struct("For").field("loop_expression", loop_expression).field("body", body).finish(),
             Node::Switch { expression, body } => f.debug_struct("Switch").field("expression", expression).field("body", body).finish(),
             Node::Case { expressions, body } => f.debug_struct("Case").field("expressions", expressions).field("body", body).finish(),
+
+            Node::EnumDeclaration { id, properties } => f.debug_struct("EnumDeclaration").field("id", id).field("properties", properties).finish(),
+            Node::Catch { error_variable, body } => f.debug_struct("Catch").field("error_variable", error_variable).field("body", body).finish(),
         }
     }
 }

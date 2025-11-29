@@ -188,6 +188,7 @@ impl KeyWord {
             | KeyWord::Class
             | KeyWord::Inherit
             | KeyWord::Enum
+            | KeyWord::Catch
         )
     }
 

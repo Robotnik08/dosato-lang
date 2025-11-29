@@ -874,6 +874,11 @@ impl Parser {
                 };
 
                 // Next token must be opening parenthesis
+                if span.1 <= start_of_function + 2 {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected opening parenthesis for function parameters".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function + 1, start_of_function + 1), false)
+                    )
+                }
                 let open_paren_token = &self.tokens[start_of_function + 1];
                 if let TokenKind::BracketOpen(BracketType::Parenthesis(_)) = &open_paren_token.kind {
                     // find closing parenthesis
@@ -890,6 +895,12 @@ impl Parser {
                         }
 
                         // the rest is the function body
+                        if self.encased_in_curly_braces((index + 1, span.1)) == false {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, "Invalid function body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(index + 1, span.1 - 1), false)
+                            )
+                        }
+
                         let body = self.parse_node(NodeType::Block, (index + 2, span.1 - 1))?;
 
                         Ok(Node::FunctionDeclaration {
@@ -963,6 +974,56 @@ impl Parser {
                     default_value,
                 })
             }
+
+            
+            NodeType::EnumDeclaration => {
+                if span.0 >= span.1 {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected enum name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                }
+                if let TokenKind::Identifier(_name) = &self.tokens[span.0].kind {
+                    if self.encased_in_curly_braces((span.0 + 1, span.1)) == false {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, "Invalid enum body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
+                        )
+                    }
+
+                    let body_span = (span.0 + 2, span.1 - 1);
+
+                    let mut properties: Vec<Node> = Vec::new();
+                    if body_span.0 == body_span.1 {
+                        return Ok(Node::EnumDeclaration { id: 0, properties });
+                    }
+
+                    let mut index = body_span.0;
+                    let mut current_property_start = index;
+                    while index < body_span.1 {
+                        let token = &self.tokens[index];
+                        skip_block!(self, index, body_span);
+                        if let TokenKind::Operator(op) = &token.kind {
+                            if let Operator::Comma = op {
+                                let property = self.parse_node(NodeType::ObjectProperty, (current_property_start, index))?;
+                                properties.push(property);
+                                current_property_start = index + 1;
+                            }
+                        }
+                        index += 1;
+                    }
+
+                    // remaining property
+                    if index > current_property_start {
+                        let property = self.parse_node(NodeType::ObjectProperty, (current_property_start, index))?;
+                        properties.push(property);
+                    }
+
+                    Ok(Node::EnumDeclaration{ id: 0, properties })
+                } else {
+                    Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, "Expected enum name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                }
+            }
             
 
 
@@ -1019,6 +1080,12 @@ impl Parser {
                             )
                         }
                         KeyWord::Define => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier after define keyword".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+                            
                             let node = self.parse_node(NodeType::FunctionDeclaration, (span.0 + 1, span.1))?;
                             Ok(node)
                         }
@@ -1320,6 +1387,12 @@ impl Parser {
                                             }
                                             body_index += 1;
                                         }
+
+                                        if case_start < body_end {
+                                            return Err(
+                                                error::Error::new(error::ErrorKind::SyntaxError, "Switch statement wasn't completed".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(case_start, body_end - 1), false)
+                                            )
+                                        }
                                         
                                         return Ok(Node::Switch {
                                             expression: Box::new(expression),
@@ -1333,6 +1406,31 @@ impl Parser {
                             Err(
                                 error::Error::new(error::ErrorKind::SyntaxError, "Expected fat arrow (=>) in switch statement".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.1 - 1), false)
                             )
+                        }
+                        KeyWord::Enum => {
+                            let node = self.parse_node(NodeType::EnumDeclaration, (span.0 + 1, span.1))?;
+                            Ok(node)
+                        }
+                        KeyWord::Catch => {
+                            if span.0 + 1 >= span.1 {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, "Empty catch body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                )
+                            }
+                            let first_token = &self.tokens[span.0 + 1];
+                            let mut index = span.0 + 1;
+                            let error_variable = if let TokenKind::Identifier(_id) = &first_token.kind {
+                                index += 1;
+                                Some(0)
+                            } else {
+                                None
+                            };
+
+                            let body = self.parse_node(NodeType::Do, (index, span.1))?;
+                            Ok(Node::Catch {
+                                error_variable,
+                                body: Box::new(body),
+                            })
                         }
                         _ => Ok(Node::Blank)
                     }
