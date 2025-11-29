@@ -7,22 +7,26 @@ pub use tokens::*;
 pub use keywords::*;
 pub use operators::*;
 
-pub struct Lexer {
+pub struct Lexer<'a> {
     source: String,
     position: usize,
     line: usize,
     column: usize,
+    name_table: &'a mut names::NameTable,
+    name_id_counter: u16,
 }
 
 const MAX_TEMPLATE_DEPTH: usize = 256;
 
-impl Lexer {
-    pub fn new(source: &str) -> Self {
+impl<'a> Lexer<'a> {
+    pub fn new(source: &str, name_table: &'a mut names::NameTable) -> Self {
         Self {
             source: source.to_string(),
             position: 0,
             line: 1,
             column: 1,
+            name_table,
+            name_id_counter: 0,
         }
     }
 
@@ -587,6 +591,8 @@ impl Lexer {
                                 start_position,
                             ));
                         } else {
+                            self.add_name(word.clone());
+
                             // identifier
                             tokens.push(tokens::Token::new(
                                 tokens::TokenKind::Identifier(word),
@@ -650,6 +656,13 @@ impl Lexer {
 
     fn remove_windows_carriage_returns(&mut self) {
         self.source = self.source.replace("\r\n", "\n");
+    }
+
+    fn add_name(&mut self, name: String) {
+        if self.name_table.get(&name).is_none() {
+            self.name_table.insert(name, self.name_id_counter);
+            self.name_id_counter += 1;
+        }
     }
 }
 

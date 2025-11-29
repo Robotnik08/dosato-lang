@@ -1,0 +1,1 @@
+pub type NameTable = std::collections::HashMap<String, u16>;

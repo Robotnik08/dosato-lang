@@ -64,6 +64,7 @@ macro_rules! skip_block_backwards {
 pub struct Parser {
     tokens: Vec<dosato_lexer::Token>,
     source_name: Option<String>,
+    name_table: names::NameTable,
 }
 
 impl Parser {
@@ -72,10 +73,11 @@ impl Parser {
         let tokens = tokens.into_iter().filter(|token| {
             !matches!(token.kind, dosato_lexer::TokenKind::Comment(_))
         }).collect();
-        Self { tokens, source_name }
+        Self { tokens, source_name, name_table: names::NameTable::new() }
     }
 
-    pub fn parse(&self) -> Result<Node, error::Error> {
+    pub fn parse(&mut self, name_table: names::NameTable) -> Result<Node, error::Error> {
+        self.name_table = name_table;
         self.parse_node(NodeType::Program, (0, self.tokens.len()))
     }
 
@@ -189,8 +191,14 @@ impl Parser {
                 if span.1 - span.0 == 1 {
                     let token = &self.tokens[span.0];
                     match &token.kind {
-                        TokenKind::Identifier(_) => {
-                            return Ok(Node::Identifier(0));
+                        TokenKind::Identifier(word) => {
+                            if let Some(id) = self.name_table.get(word) {
+                                return Ok(Node::Identifier(*id));
+                            } else {
+                                return Err(
+                                    error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", word), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                                );
+                            }
                         }
                         TokenKind::IntegerLiteral(_) | 
                         TokenKind::NumberLiteral(_) | 
@@ -865,8 +873,8 @@ impl Parser {
 
                 // Next token must be an identifier (function name)
                 let name_token = &self.tokens[start_of_function];
-                let _name = if let TokenKind::Identifier(id) = &name_token.kind {
-                    id
+                let name = if let TokenKind::Identifier(word) = &name_token.kind {
+                    word
                 } else {
                     return Err(
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected function name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
@@ -903,8 +911,16 @@ impl Parser {
 
                         let body = self.parse_node(NodeType::Block, (index + 2, span.1 - 1))?;
 
+                        let id = if let Some(id) = self.name_table.get(name) {
+                            *id
+                        } else {
+                            return Err(
+                                error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", name), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(start_of_function, start_of_function), false)
+                            )
+                        };
+
                         Ok(Node::FunctionDeclaration {
-                            id: 0,
+                            id,
                             parameters: parameter_nodes,
                             return_type,
                             body: Box::new(body),
@@ -938,9 +954,9 @@ impl Parser {
                 };
 
                 let name_token = &self.tokens[current_index];
-                let _name = if let TokenKind::Identifier(id) = &name_token.kind {
+                let name = if let TokenKind::Identifier(word) = &name_token.kind {
                     current_index += 1;
-                    id
+                    word
                 } else {
                     return Err(
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected parameter name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(current_index, current_index), false)
@@ -968,8 +984,16 @@ impl Parser {
                     Box::new(Node::Blank)
                 };
 
+                let id = if let Some(id) = self.name_table.get(name) {
+                    *id
+                } else {
+                    return Err(
+                        error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", name), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                    )
+                };
+
                 Ok(Node::FunctionParameter {
-                    id: 0,
+                    id,
                     type_annotation,
                     default_value,
                 })
@@ -982,18 +1006,26 @@ impl Parser {
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected enum name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
                     )
                 }
-                if let TokenKind::Identifier(_name) = &self.tokens[span.0].kind {
+                if let TokenKind::Identifier(name) = &self.tokens[span.0].kind {
                     if self.encased_in_curly_braces((span.0 + 1, span.1)) == false {
                         return Err(
                             error::Error::new(error::ErrorKind::SyntaxError, "Invalid enum body".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.1 - 1), false)
                         )
                     }
 
+                    let id = if let Some(id) = self.name_table.get(name) {
+                        *id
+                    } else {
+                        return Err(
+                            error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", name), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
+                        )
+                    };
+
                     let body_span = (span.0 + 2, span.1 - 1);
 
                     let mut properties: Vec<Node> = Vec::new();
                     if body_span.0 == body_span.1 {
-                        return Ok(Node::EnumDeclaration { id: 0, properties });
+                        return Ok(Node::EnumDeclaration { id, properties });
                     }
 
                     let mut index = body_span.0;
@@ -1017,7 +1049,7 @@ impl Parser {
                         properties.push(property);
                     }
 
-                    Ok(Node::EnumDeclaration{ id: 0, properties })
+                    Ok(Node::EnumDeclaration{ id, properties })
                 } else {
                     Err(
                         error::Error::new(error::ErrorKind::SyntaxError, "Expected enum name identifier".to_string(), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0, span.0), false)
@@ -1419,9 +1451,18 @@ impl Parser {
                             }
                             let first_token = &self.tokens[span.0 + 1];
                             let mut index = span.0 + 1;
-                            let error_variable = if let TokenKind::Identifier(_id) = &first_token.kind {
+                            let error_variable = if let TokenKind::Identifier(word) = &first_token.kind {
                                 index += 1;
-                                Some(0)
+
+                                let id = if let Some(id) = self.name_table.get(word) {
+                                    *id
+                                } else {
+                                    return Err(
+                                        error::Error::new(error::ErrorKind::SyntaxError, format!("Undefined identifier '{}'", word), self.source_name.clone().unwrap_or("".to_string()), self.get_line_column_len(span.0 + 1, span.0 + 1), false)
+                                    )
+                                };
+
+                                Some(id)
                             } else {
                                 None
                             };

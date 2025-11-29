@@ -1,6 +1,6 @@
 # Parser TODOs
 
-- [ ] Identifier table integration
+- [X] Identifier table integration
 
 ## Expressions
 
