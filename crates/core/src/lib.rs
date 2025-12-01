@@ -1,4 +1,5 @@
 pub use dosato_runtime::*;
+pub use dosato_vm::*;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

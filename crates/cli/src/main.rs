@@ -4,6 +4,8 @@ use std::fs;
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
+        dosato_core::test();
+
         eprintln!("Usage: dosato <file>");
         std::process::exit(1);
     }
