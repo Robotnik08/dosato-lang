@@ -38,6 +38,7 @@ impl std::fmt::Debug for CallFrame {
         f.debug_struct("CallFrame")
             .field("ip", &self.ip)
             .field("registers", &self.registers)
+            .field("code", &self.code)
             .finish()
     }
 }
